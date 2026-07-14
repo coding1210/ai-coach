@@ -1,0 +1,24 @@
+# Local Postgres for the LangGraph checkpointer + proficiency ledger.
+# Supabase is Postgres under the hood, so the same schema/code targets it later.
+#   docker compose up -d
+services:
+  postgres:
+    image: postgres:16
+    container_name: aicoach-postgres
+    environment:
+      POSTGRES_USER: coach
+      POSTGRES_PASSWORD: coach
+      POSTGRES_DB: aicoach
+    ports:
+      # Host 5433 → container 5432, to avoid colliding with a local/brew Postgres on 5432.
+      - "5433:5432"
+    volumes:
+      - aicoach_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coach -d aicoach"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  aicoach_pgdata:

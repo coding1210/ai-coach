@@ -1,0 +1,157 @@
+"""report — synthesize scores into an evaluation report (Design.md §7).
+
+Structured data (strengths / weaknesses / per-domain radar / priorities) is
+computed deterministically from the scores + rubric. In re-assessment mode the
+prior levels are carried in for competencies not re-probed, so the radar shows
+the full current standing, and each re-scored competency gets a delta vs. last
+time (the visible "status promotion"). A short conversational narrative is
+generated on top (GPT via the `report` task) — the numbers never depend on it.
+"""
+
+from __future__ import annotations
+
+from collections import defaultdict
+
+from app.competency.loader import get_competency_map
+from app.competency.selection import target_level_for
+from app.graph.state import CoachState
+from app.graph.streaming import emit, emit_streamed_text
+from app.llm.providers import Message
+from app.llm.router import get_router
+
+
+def build_report(scores: dict, cmap, prior_levels: dict[str, int] | None = None) -> dict:
+    prior_levels = prior_levels or {}
+    strengths: list[dict] = []
+    weaknesses: list[dict] = []
+    domain_agg: dict[str, dict] = defaultdict(
+        lambda: {"cur": [], "tgt": [], "name": "", "weight": ""}
+    )
+
+    scored = []
+    for cid, s in scores.items():
+        domain = cmap.domain_of(cid)
+        target = target_level_for(domain.weight)
+        gap = max(0, target - s["level"])
+        priority = gap * cmap.weight_scale[domain.weight]
+        prev = prior_levels.get(cid)
+        entry = {
+            "competency_id": cid,
+            "competency_name": cmap.competency(cid).name,
+            "domain_id": domain.id,
+            "current_level": s["level"],
+            "target_level": target,
+            "gap": gap,
+            "priority": priority,
+            "evidence": s["evidence"],
+            "previous_level": prev,
+            "delta": (s["level"] - prev) if prev is not None else None,
+        }
+        scored.append(entry)
+        (strengths if gap == 0 else weaknesses).append(entry)
+
+        agg = domain_agg[domain.id]
+        agg["name"] = domain.name
+        agg["weight"] = domain.weight
+        agg["cur"].append(s["level"])
+        agg["tgt"].append(target)
+
+    weaknesses.sort(key=lambda e: e["priority"], reverse=True)
+
+    radar = [
+        {
+            "domain_id": did,
+            "domain_name": a["name"],
+            "weight": a["weight"],
+            "current": round(sum(a["cur"]) / len(a["cur"]), 2),
+            "target": round(sum(a["tgt"]) / len(a["tgt"]), 2),
+        }
+        for did, a in domain_agg.items()
+    ]
+
+    priorities = [w["competency_id"] for w in weaknesses[:3]]
+
+    improved = [e for e in scored if e.get("delta") and e["delta"] > 0]
+    growth = {
+        "improved_count": len(improved),
+        "total_delta": sum(e["delta"] for e in improved),
+        "improved": [
+            {"competency_name": e["competency_name"], "from": e["previous_level"], "to": e["current_level"]}
+            for e in improved
+        ],
+    }
+
+    return {
+        "strengths": strengths,
+        "weaknesses": weaknesses,
+        "radar": radar,
+        "priorities": priorities,
+        "competencies_assessed": len(scored),
+        "growth": growth,
+    }
+
+
+async def _narrative(report: dict, profile: dict, reassess: bool) -> str:
+    top = ", ".join(w["competency_name"] for w in report["weaknesses"][:3]) or "none major"
+    strong = ", ".join(s["competency_name"] for s in report["strengths"][:3]) or "still forming"
+    growth = report.get("growth", {})
+
+    if reassess:
+        moved = "; ".join(
+            f"{g['competency_name']} L{g['from']}→L{g['to']}" for g in growth.get("improved", [])[:4]
+        ) or "no measurable movement yet"
+        user_msg = (
+            f"This is a RE-ASSESSMENT. Movement since last time: {moved}. "
+            f"Remaining top gaps: {top}. Write a short, encouraging spoken update that "
+            "celebrates the growth specifically, is honest about what still needs work, "
+            "and frames next steps. Growth mindset; no 'you failed'."
+        )
+    else:
+        user_msg = (
+            f"Profile: {profile}\nStrengths: {strong}\nTop gaps to coach: {top}\n"
+            "Write the spoken summary that introduces their evaluation and the areas "
+            "we'll focus on."
+        )
+
+    messages: list[Message] = [
+        {
+            "role": "system",
+            "content": (
+                "You are a Gen AI engineering coach delivering an honest, encouraging "
+                "diagnosis. Be specific and brief (a short paragraph). Growth-mindset "
+                "framing; never say 'you failed'."
+            ),
+        },
+        {"role": "user", "content": user_msg},
+    ]
+    provider = get_router().for_task("report")
+    return await emit_streamed_text(provider, messages, temperature=0.4, max_tokens=400)
+
+
+async def report(state: CoachState) -> dict:
+    cmap = get_competency_map()
+    reassess = state.get("mode") == "reassess"
+    prior = state.get("prior_levels", {}) if reassess else {}
+    scores = state.get("scores", {})
+
+    # In reassess mode, carry prior levels for competencies we didn't re-probe so
+    # the radar reflects the full current standing; new scores override.
+    merged = {}
+    if reassess:
+        for cid, lvl in prior.items():
+            merged[cid] = {
+                "competency_id": cid,
+                "level": lvl,
+                "evidence": "Carried from your last assessment (not re-probed this session).",
+                "confidence": 0.5,
+            }
+    merged.update(scores)
+
+    built = build_report(merged, cmap, prior_levels=prior)
+    narrative = await _narrative(built, state.get("profile") or {}, reassess)
+    emit({"type": "report", "data": built})
+    return {
+        "phase": "report",
+        "report": built,
+        "messages": [{"role": "assistant", "content": narrative}],
+    }

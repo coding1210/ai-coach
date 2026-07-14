@@ -1,0 +1,450 @@
+{
+  "version": "1.0",
+  "updated": "2026-07-14",
+  "purpose": "Diagnostic rubric for the AI Coach. Consumed by the assess/score LangGraph nodes. This is a COACHING rubric (assessed against), NOT a teaching curriculum.",
+  "proficiency_levels": [
+    { "level": 1, "name": "Novice", "meaning": "Knows the term; needs step-by-step guidance; no real project use." },
+    { "level": 2, "name": "Advanced Beginner", "meaning": "Uses it in tutorials/toy projects; misses edge cases." },
+    { "level": 3, "name": "Competent", "meaning": "Ships it in real projects; makes deliberate trade-offs." },
+    { "level": 4, "name": "Proficient", "meaning": "Designs it; debugs failure modes; optimizes cost/latency." },
+    { "level": 5, "name": "Expert", "meaning": "Sets patterns for others; handles novel/ambiguous cases; mentors." }
+  ],
+  "weight_scale": { "critical": 5, "high": 4, "medium-high": 3, "medium": 2, "low-medium": 1 },
+  "assessment": {
+    "order": ["critical", "high", "medium-high", "medium", "low-medium"],
+    "coverage_threshold": 0.7,
+    "notes": "Rank competencies by weight; probe high-weight/low-coverage first. Adapt follow-ups to answers. Stop when weighted coverage of critical+high reaches threshold or the user opts to see results."
+  },
+  "scoring": {
+    "method": "llm_as_judge",
+    "output_schema": { "level": "int 1-5", "evidence": "string quoting user's answer", "confidence": "float 0-1" },
+    "bias_controls": ["ignore verbosity (long != better)", "no self-preference", "score only against level_anchors"],
+    "calibration": "Validate judge vs a small human-labeled sample (Cohen's kappa); tune prompt until agreement is acceptable."
+  },
+  "domains": [
+    {
+      "id": "rag",
+      "name": "RAG (Retrieval-Augmented Generation)",
+      "weight": "critical",
+      "competencies": [
+        {
+          "id": "rag.chunking",
+          "name": "Chunking strategies",
+          "sample_question": "Design a RAG system over a company's legal contracts. How would you chunk the documents, and where do retrieval failures usually come from?",
+          "level_anchors": { "2": "Naive fixed-size chunking, no overlap consideration.", "4": "Structure/semantic-aware chunking tuned to the corpus; reasons about overlap, metadata, and how chunking affects recall." }
+        },
+        {
+          "id": "rag.embeddings",
+          "name": "Embeddings & embedding models",
+          "sample_question": "How do you choose an embedding model, and how do you know it's good enough for your data?",
+          "level_anchors": { "2": "Uses a default embedding model without evaluation.", "4": "Selects by domain/latency/cost, evaluates retrieval quality, considers fine-tuned or domain embeddings." }
+        },
+        {
+          "id": "rag.vector_dbs",
+          "name": "Vector databases (Qdrant/Pinecone/Weaviate/pgvector)",
+          "sample_question": "Which vector store would you pick and why, and how do metadata filters change your design?",
+          "level_anchors": { "2": "Knows one store, basic top-k similarity.", "4": "Chooses per requirements, uses metadata filtering, understands index types and trade-offs." }
+        },
+        {
+          "id": "rag.hybrid_rerank",
+          "name": "Hybrid search & re-ranking",
+          "sample_question": "Pure vector search returns irrelevant chunks. What do you add to improve relevance?",
+          "level_anchors": { "2": "Only dense similarity.", "4": "Combines lexical + dense (hybrid), adds a re-ranker, measures the lift." }
+        },
+        {
+          "id": "rag.retrieval_eval",
+          "name": "Retrieval evaluation",
+          "sample_question": "How do you measure whether your retrieval is actually working?",
+          "level_anchors": { "2": "Eyeballs a few results.", "4": "Uses recall/precision/hit-rate on a labeled set, separates retrieval vs generation failures (e.g., RAGAS)." }
+        },
+        {
+          "id": "rag.graph_rag",
+          "name": "Graph RAG (Neo4j)",
+          "sample_question": "When would a knowledge graph beat plain vector RAG?",
+          "level_anchors": { "2": "Unaware of graph RAG.", "4": "Uses graph relationships for multi-hop/structured queries where vector similarity falls short." }
+        },
+        {
+          "id": "rag.when_not",
+          "name": "When NOT to use RAG",
+          "sample_question": "When is RAG the wrong tool, and what would you do instead?",
+          "level_anchors": { "2": "Defaults to RAG for everything.", "4": "Weighs long-context, fine-tuning, or tool-calling alternatives depending on the problem." }
+        }
+      ]
+    },
+    {
+      "id": "agents",
+      "name": "Agents & Orchestration",
+      "weight": "critical",
+      "competencies": [
+        {
+          "id": "agents.tool_calling",
+          "name": "Function/tool calling",
+          "sample_question": "Walk me through how you expose tools to an LLM and make sure it calls them correctly.",
+          "level_anchors": { "2": "Basic single tool, hopes the model calls it.", "4": "Clear tool schemas/descriptions, validates args, handles tool errors and retries." }
+        },
+        {
+          "id": "agents.react_planning",
+          "name": "ReAct & planning loops",
+          "sample_question": "How does an agent decide its next action, and how do you keep the loop from running forever?",
+          "level_anchors": { "2": "Understands the loop conceptually.", "4": "Implements bounded reasoning loops with step limits, planning, and termination conditions." }
+        },
+        {
+          "id": "agents.langgraph",
+          "name": "LangGraph (state machines, checkpointing, HITL)",
+          "sample_question": "Why model an agent as a graph? How do checkpointing and human-in-the-loop fit in?",
+          "level_anchors": { "2": "Has followed a LangGraph tutorial.", "4": "Designs state schemas, uses checkpointers for resumability, subgraphs for modularity, and HITL interrupts." }
+        },
+        {
+          "id": "agents.multi_agent",
+          "name": "Multi-agent patterns (CrewAI)",
+          "sample_question": "When do multiple agents beat one, and what breaks when you add them?",
+          "level_anchors": { "2": "Thinks more agents = better.", "4": "Uses multi-agent only when roles/parallelism justify it; manages coordination, cost, and error propagation." }
+        },
+        {
+          "id": "agents.memory",
+          "name": "Agent memory",
+          "sample_question": "How does your agent remember things within and across sessions?",
+          "level_anchors": { "2": "Stuffs history into the prompt.", "4": "Separates short-term (thread) vs long-term memory, summarizes/retrieves, manages the context budget." }
+        },
+        {
+          "id": "agents.mcp",
+          "name": "MCP (build/consume servers)",
+          "sample_question": "What is MCP and when would you build a server for it?",
+          "level_anchors": { "2": "Heard of MCP.", "4": "Builds/consumes MCP servers to expose tools/data in a standard, secure, reusable way." }
+        },
+        {
+          "id": "agents.failure_modes",
+          "name": "Failure-mode handling",
+          "sample_question": "Your agent sometimes loops or calls the wrong tool. How do you make it reliable?",
+          "level_anchors": { "2": "No guardrails.", "4": "Step limits, validation, fallbacks, retries, observability, graceful degradation." }
+        }
+      ]
+    },
+    {
+      "id": "evaluation",
+      "name": "Evaluation & Testing",
+      "weight": "critical",
+      "competencies": [
+        {
+          "id": "eval.design_golden",
+          "name": "Eval design & golden datasets",
+          "sample_question": "How do you know your LLM app is actually good?",
+          "level_anchors": { "2": "Manual spot checks.", "4": "Builds golden datasets, defines metrics tied to the use case, runs systematic evals." }
+        },
+        {
+          "id": "eval.llm_judge",
+          "name": "LLM-as-a-judge",
+          "sample_question": "How would you use an LLM to grade another LLM, and what goes wrong?",
+          "level_anchors": { "2": "Asks a model 'is this good?'.", "4": "Rubric-grounded judge, controls verbosity/position/self-preference bias, calibrates against humans." }
+        },
+        {
+          "id": "eval.frameworks",
+          "name": "Eval frameworks (RAGAS/DeepEval/Promptfoo/LangSmith)",
+          "sample_question": "What tooling do you reach for to evaluate a RAG or agent pipeline?",
+          "level_anchors": { "2": "Writes ad-hoc scripts.", "4": "Uses appropriate frameworks and integrates them into the workflow." }
+        },
+        {
+          "id": "eval.regression",
+          "name": "Regression testing",
+          "sample_question": "You change a prompt. How do you make sure you didn't break anything?",
+          "level_anchors": { "2": "Manual re-check.", "4": "Automated regression suite in CI over a fixed dataset with thresholds." }
+        },
+        {
+          "id": "eval.offline_online",
+          "name": "Offline vs online eval",
+          "sample_question": "What's the difference between evaluating before and after deployment, and why do both?",
+          "level_anchors": { "2": "Only offline.", "4": "Offline for iteration + online (production signals, A/B, user feedback) for reality." }
+        },
+        {
+          "id": "eval.agent_quality",
+          "name": "Measuring agent quality",
+          "sample_question": "How do you evaluate a multi-step agent, not just a single response?",
+          "level_anchors": { "2": "Checks final answer only.", "4": "Evaluates trajectory, tool-use correctness, task completion, and cost/latency." }
+        }
+      ]
+    },
+    {
+      "id": "llm_fundamentals",
+      "name": "LLM Fundamentals & APIs",
+      "weight": "high",
+      "competencies": [
+        {
+          "id": "llm.tokens_context",
+          "name": "Tokenization & context windows",
+          "sample_question": "What actually happens when your prompt gets too long?",
+          "level_anchors": { "2": "Vague idea of limits.", "4": "Reasons about tokens, truncation, cost, and context-window management strategies." }
+        },
+        {
+          "id": "llm.sampling",
+          "name": "Sampling params (temperature, top-p)",
+          "sample_question": "When do you change temperature/top-p and why?",
+          "level_anchors": { "2": "Leaves defaults.", "4": "Tunes deliberately for determinism vs creativity per task." }
+        },
+        {
+          "id": "llm.structured_output",
+          "name": "Structured outputs / JSON mode",
+          "sample_question": "How do you get reliable, schema-valid JSON out of a model?",
+          "level_anchors": { "2": "Parses free text and hopes.", "4": "Uses structured-output/JSON modes with schemas and validation + retries." }
+        },
+        {
+          "id": "llm.streaming",
+          "name": "Streaming",
+          "sample_question": "Why and how would you stream tokens to a user?",
+          "level_anchors": { "2": "Waits for full response.", "4": "Streams for perceived latency, handles partial/aborted streams." }
+        },
+        {
+          "id": "llm.multi_provider",
+          "name": "Multi-provider APIs (OpenAI/Anthropic/Groq)",
+          "sample_question": "How do you keep your code from being locked to one LLM provider?",
+          "level_anchors": { "2": "Hardcodes one SDK.", "4": "Abstracts providers, handles differences, enables routing/fallback." }
+        },
+        {
+          "id": "llm.model_selection",
+          "name": "Model selection & trade-offs",
+          "sample_question": "How do you pick which model to use for a given task?",
+          "level_anchors": { "2": "Uses one model for everything.", "4": "Routes by quality/latency/cost per task with evidence." }
+        },
+        {
+          "id": "llm.cost_awareness",
+          "name": "Cost/token awareness",
+          "sample_question": "How do you keep LLM costs under control at scale?",
+          "level_anchors": { "2": "Doesn't track cost.", "4": "Monitors token cost, caches, compresses context, routes to cheaper models." }
+        }
+      ]
+    },
+    {
+      "id": "context_prompt",
+      "name": "Context & Prompt Engineering",
+      "weight": "high",
+      "competencies": [
+        {
+          "id": "ctx.system_prompt",
+          "name": "System prompt design",
+          "sample_question": "How do you design a system prompt for a consistent agent persona and behavior?",
+          "level_anchors": { "2": "Ad-hoc instructions.", "4": "Structured, testable system prompts; separates role, constraints, tools, examples." }
+        },
+        {
+          "id": "ctx.few_shot",
+          "name": "Few-shot & role prompting",
+          "sample_question": "When do examples help and when do they hurt?",
+          "level_anchors": { "2": "Adds examples randomly.", "4": "Chooses representative examples, watches token cost and overfitting to format." }
+        },
+        {
+          "id": "ctx.window_mgmt",
+          "name": "Context-window management",
+          "sample_question": "Your context keeps overflowing. How do you decide what to keep?",
+          "level_anchors": { "2": "Truncates blindly.", "4": "Budgets context, summarizes, retrieves selectively, prioritizes by relevance." }
+        },
+        {
+          "id": "ctx.tool_descriptions",
+          "name": "Tool/function description quality",
+          "sample_question": "An agent misuses a tool. How do you fix it via the tool's description/context?",
+          "level_anchors": { "2": "Tweaks wording ad hoc.", "4": "Treats tool descriptions as an interface: precise, examples, constraints, measured iteration." }
+        },
+        {
+          "id": "ctx.templating_versioning",
+          "name": "Prompt templating & versioning",
+          "sample_question": "How do you manage prompts across a codebase so you can reproduce behavior?",
+          "level_anchors": { "2": "Inline string literals.", "4": "Templated, versioned prompts tied to code, with change tracking." }
+        },
+        {
+          "id": "ctx.hallucination",
+          "name": "Hallucination reduction via prompting",
+          "sample_question": "What prompting techniques reduce hallucination, and what are their limits?",
+          "level_anchors": { "2": "Says 'don't hallucinate'.", "4": "Grounding, citations, 'say I don't know', constrained output; knows prompting alone isn't enough." }
+        }
+      ]
+    },
+    {
+      "id": "production",
+      "name": "Production Architecture & Serving",
+      "weight": "high",
+      "competencies": [
+        {
+          "id": "prod.fastapi_streaming",
+          "name": "FastAPI + streaming/WebSockets",
+          "sample_question": "How do you serve an LLM app that streams responses to many users?",
+          "level_anchors": { "2": "Basic sync endpoint.", "4": "Async streaming over SSE/WebSocket, backpressure, connection handling." }
+        },
+        {
+          "id": "prod.caching",
+          "name": "Caching (prompt/response)",
+          "sample_question": "Where can caching help in an LLM pipeline?",
+          "level_anchors": { "2": "No caching.", "4": "Prompt/response caching, embedding cache, semantic cache with invalidation." }
+        },
+        {
+          "id": "prod.routing_fallback",
+          "name": "Model routing & fallbacks",
+          "sample_question": "A provider goes down mid-request. What happens?",
+          "level_anchors": { "2": "Request fails.", "4": "Automatic fallback/routing across providers with degradation, not a hard failure." }
+        },
+        {
+          "id": "prod.latency_cost_opt",
+          "name": "Latency & cost optimization",
+          "sample_question": "Your app feels slow and expensive. Where do you look first?",
+          "level_anchors": { "2": "Guesses.", "4": "Profiles TTFT/throughput/cost per stage, optimizes model/caching/context deliberately." }
+        },
+        {
+          "id": "prod.rate_concurrency",
+          "name": "Rate-limit & concurrency handling",
+          "sample_question": "How do you handle provider rate limits under load?",
+          "level_anchors": { "2": "Hits limits and errors.", "4": "Queues, backoff, concurrency caps, per-key budgeting." }
+        },
+        {
+          "id": "prod.deployment",
+          "name": "Deployment",
+          "sample_question": "How do you take a prototype to a deployed service?",
+          "level_anchors": { "2": "Runs locally only.", "4": "Containerized, config/secrets management, health checks, real deploy target." }
+        }
+      ]
+    },
+    {
+      "id": "observability",
+      "name": "Observability & LLMOps",
+      "weight": "medium-high",
+      "competencies": [
+        {
+          "id": "obs.tracing",
+          "name": "Tracing (LangFuse/LangSmith/Helicone)",
+          "sample_question": "Responses got worse yesterday. How do you find out what changed?",
+          "level_anchors": { "2": "Adds print statements.", "4": "Traces per-request spans, inputs/outputs, tokens, latency; searchable and comparable." }
+        },
+        {
+          "id": "obs.cost_monitoring",
+          "name": "Token/cost monitoring",
+          "sample_question": "How do you track cost per request and per feature over time?",
+          "level_anchors": { "2": "Checks the monthly bill.", "4": "Per-request token/cost metrics, dashboards, alerts on anomalies." }
+        },
+        {
+          "id": "obs.prompt_versioning",
+          "name": "Prompt versioning with code",
+          "sample_question": "How do you reproduce a past behavior of your app?",
+          "level_anchors": { "2": "Can't reproduce.", "4": "Prompts versioned with code so any past behavior is reproducible." }
+        },
+        {
+          "id": "obs.logging",
+          "name": "Logging I/O for debugging",
+          "sample_question": "What do you log for an LLM feature and why?",
+          "level_anchors": { "2": "Minimal logs.", "4": "Structured I/O logging balanced with privacy/PII and cost." }
+        },
+        {
+          "id": "obs.cicd",
+          "name": "CI/CD for LLM apps",
+          "sample_question": "What runs in CI for an LLM app that wouldn't for a normal service?",
+          "level_anchors": { "2": "Only unit tests.", "4": "Eval/regression gates on prompt/model changes in CI." }
+        }
+      ]
+    },
+    {
+      "id": "python",
+      "name": "Python Engineering Foundations",
+      "weight": "medium",
+      "competencies": [
+        {
+          "id": "py.async",
+          "name": "async/await & concurrency",
+          "sample_question": "You're calling an LLM API 500 times in a batch. How do you structure that for speed and resilience?",
+          "level_anchors": { "2": "Synchronous loop.", "4": "Async with concurrency limits, backoff, timeouts." }
+        },
+        {
+          "id": "py.typing",
+          "name": "Type hints & Pydantic",
+          "sample_question": "How do you validate and model structured data in Python?",
+          "level_anchors": { "2": "Untyped dicts.", "4": "Typed models with Pydantic validation at boundaries." }
+        },
+        {
+          "id": "py.testing",
+          "name": "Testing (pytest, mocking LLM calls)",
+          "sample_question": "How do you test code that depends on an LLM API?",
+          "level_anchors": { "2": "Calls the real API in tests.", "4": "Mocks/records LLM calls, deterministic tests, fixtures." }
+        },
+        {
+          "id": "py.packaging",
+          "name": "Packaging & dependency management",
+          "sample_question": "How do you manage dependencies and environments for a Python project?",
+          "level_anchors": { "2": "pip install ad hoc.", "4": "Locked deps, virtual envs, reproducible builds (uv/poetry)." }
+        },
+        {
+          "id": "py.architecture",
+          "name": "Clean architecture / project structure",
+          "sample_question": "How do you structure a growing LLM app so it stays maintainable?",
+          "level_anchors": { "2": "One big file.", "4": "Layered/modular structure, separation of concerns, clear interfaces." }
+        },
+        {
+          "id": "py.error_handling",
+          "name": "Error handling, retries & timeouts",
+          "sample_question": "An external call flakes intermittently. How do you handle it?",
+          "level_anchors": { "2": "Bare try/except.", "4": "Typed errors, retries with backoff, timeouts, circuit breaking." }
+        }
+      ]
+    },
+    {
+      "id": "safety",
+      "name": "Safety, Security & Responsible AI",
+      "weight": "medium",
+      "competencies": [
+        {
+          "id": "safety.prompt_injection",
+          "name": "Prompt-injection defense",
+          "sample_question": "Your agent reads user-supplied documents and can call tools. What could go wrong?",
+          "level_anchors": { "2": "Trusts inputs.", "4": "Treats external content as untrusted, isolates instructions, limits tool permissions." }
+        },
+        {
+          "id": "safety.jailbreak",
+          "name": "Jailbreak resistance",
+          "sample_question": "How do you keep users from making your agent misbehave?",
+          "level_anchors": { "2": "No defenses.", "4": "Layered defenses, refusal handling, monitoring for abuse." }
+        },
+        {
+          "id": "safety.guardrails",
+          "name": "Guardrails",
+          "sample_question": "How do you constrain what your agent is allowed to output or do?",
+          "level_anchors": { "2": "None.", "4": "Input/output guardrails, allow-lists, validation layers." }
+        },
+        {
+          "id": "safety.pii",
+          "name": "PII handling",
+          "sample_question": "How do you handle personal data flowing through an LLM app?",
+          "level_anchors": { "2": "Logs everything.", "4": "Minimizes, redacts, controls retention, aware of compliance." }
+        },
+        {
+          "id": "safety.red_teaming",
+          "name": "Red teaming",
+          "sample_question": "How do you proactively find your agent's weaknesses?",
+          "level_anchors": { "2": "Waits for incidents.", "4": "Systematic adversarial testing before shipping." }
+        }
+      ]
+    },
+    {
+      "id": "finetuning",
+      "name": "Fine-tuning & Dataset Engineering",
+      "weight": "low-medium",
+      "competencies": [
+        {
+          "id": "ft.decision",
+          "name": "When to fine-tune vs RAG vs prompt",
+          "sample_question": "When would you fine-tune instead of RAG or better prompting?",
+          "level_anchors": { "2": "Thinks fine-tuning is the default fix.", "4": "Clear decision framework: prompt -> RAG -> fine-tune, based on the problem." }
+        },
+        {
+          "id": "ft.lora_qlora",
+          "name": "LoRA / QLoRA",
+          "sample_question": "How would you fine-tune a model cheaply?",
+          "level_anchors": { "2": "Only knows full fine-tuning.", "4": "Understands LoRA/QLoRA trade-offs, hardware/cost implications." }
+        },
+        {
+          "id": "ft.dataset_curation",
+          "name": "Dataset curation",
+          "sample_question": "What makes a good fine-tuning dataset?",
+          "level_anchors": { "2": "More data = better.", "4": "Quality, diversity, labeling, dedup, and eval split discipline." }
+        },
+        {
+          "id": "ft.eval_tuned",
+          "name": "Evaluating fine-tuned models",
+          "sample_question": "How do you know your fine-tune actually improved things?",
+          "level_anchors": { "2": "Assumes it's better.", "4": "Compares against baseline on held-out evals, watches for regressions." }
+        }
+      ]
+    }
+  ]
+}
