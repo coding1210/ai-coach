@@ -1,0 +1,189 @@
+{
+  "metrics": {
+    "n": 22,
+    "provider": "openai",
+    "accuracy": 0.818,
+    "within_one": 1.0,
+    "mae": 0.182,
+    "cohen_kappa": 0.753,
+    "quadratic_weighted_kappa": 0.936
+  },
+  "items": [
+    {
+      "competency_id": "py.async",
+      "competency_name": "async/await & concurrency",
+      "label": 4,
+      "pred": 4,
+      "confidence": 0.9,
+      "evidence": "The candidate mentions using 'asyncio.gather behind a semaphore to cap concurrency,' 'retry with exponential backoff and jitter,' and 'set a per-request timeout,' which aligns with handling concurrency limits, backoff, and timeouts."
+    },
+    {
+      "competency_id": "py.async",
+      "competency_name": "async/await & concurrency",
+      "label": 2,
+      "pred": 2,
+      "confidence": 0.9,
+      "evidence": "The candidate suggests using a normal for loop with a try/except block, which indicates a synchronous approach to handling the API calls. This aligns with the description of a synchronous loop, which is characteristic of an Advanced Beginner (L2)."
+    },
+    {
+      "competency_id": "llm.structured_output",
+      "competency_name": "Structured outputs / JSON mode",
+      "label": 4,
+      "pred": 4,
+      "confidence": 0.9,
+      "evidence": "The candidate mentions using the provider's structured-output / JSON-schema mode with a Pydantic model, validating on parse, and retrying if validation fails. This indicates a proficient level of understanding and application of structured-output/JSON modes with schemas and validation + retries."
+    },
+    {
+      "competency_id": "llm.structured_output",
+      "competency_name": "Structured outputs / JSON mode",
+      "label": 2,
+      "pred": 2,
+      "confidence": 0.8,
+      "evidence": "The candidate mentions using 'return JSON' in the prompt and then using json.loads on the response, which indicates a basic understanding of parsing free text into JSON. However, there is no mention of using schemas, validation, or handling retries, which are necessary for higher levels."
+    },
+    {
+      "competency_id": "rag.vector_dbs",
+      "competency_name": "Vector databases (Qdrant/Pinecone/Weaviate/pgvector)",
+      "label": 4,
+      "pred": 4,
+      "confidence": 0.9,
+      "evidence": "The candidate states they choose vector stores based on requirements, mentioning specific use cases for pgvector and Qdrant. They also discuss designing metadata filters upfront and selecting index types (HNSW vs IVF) based on recall/latency trade-offs, indicating a proficient understanding of vector databases."
+    },
+    {
+      "competency_id": "rag.vector_dbs",
+      "competency_name": "Vector databases (Qdrant/Pinecone/Weaviate/pgvector)",
+      "label": 1,
+      "pred": 1,
+      "confidence": 0.9,
+      "evidence": "The candidate mentions having heard of Pinecone but admits to not having set one up, indicating a lack of practical experience or deeper understanding."
+    },
+    {
+      "competency_id": "safety.prompt_injection",
+      "competency_name": "Prompt-injection defense",
+      "label": 4,
+      "pred": 4,
+      "confidence": 0.9,
+      "evidence": "The candidate states they treat retrieved and user-supplied content as untrusted, keep instructions and data in separate channels, and constrain tool permissions with allow-lists. These actions align with the L4 anchor, which involves treating external content as untrusted, isolating instructions, and limiting tool permissions."
+    },
+    {
+      "competency_id": "safety.prompt_injection",
+      "competency_name": "Prompt-injection defense",
+      "label": 1,
+      "pred": 2,
+      "confidence": 0.9,
+      "evidence": "The candidate states, 'The documents come from our own users so I trust them,' indicating a level of trust in user inputs."
+    },
+    {
+      "competency_id": "rag.retrieval_eval",
+      "competency_name": "Retrieval evaluation",
+      "label": 4,
+      "pred": 4,
+      "confidence": 0.9,
+      "evidence": "The candidate mentions building a labeled query-to-relevant-doc set and tracking recall@k, precision, and MRR. They also separate retrieval failures from generation failures and use RAGAS for context precision and faithfulness."
+    },
+    {
+      "competency_id": "rag.chunking",
+      "competency_name": "Chunking strategies",
+      "label": 4,
+      "pred": 4,
+      "confidence": 0.9,
+      "evidence": "The candidate mentions 'structure-aware chunking on clause and section boundaries for contracts,' indicating an understanding of semantic-aware chunking. They also consider 'overlap tuned to the embedding window' and 'metadata per chunk,' which shows reasoning about overlap and metadata. Additionally, they state 'Chunking drives recall so I test it against a labeled set rather than guess,' demonstrating an understanding of how chunking affects recall and the importance of testing."
+    },
+    {
+      "competency_id": "llm.model_selection",
+      "competency_name": "Model selection & trade-offs",
+      "label": 4,
+      "pred": 4,
+      "confidence": 0.9,
+      "evidence": "The candidate states they \"route by task: a small fast model for classification and routing, a stronger model for scoring.\" They also mention benchmarking \"quality vs latency vs cost per 1k tokens and set per-task defaults with fallbacks.\" This indicates a proficiency in routing by quality, latency, and cost per task with evidence."
+    },
+    {
+      "competency_id": "llm.model_selection",
+      "competency_name": "Model selection & trade-offs",
+      "label": 2,
+      "pred": 2,
+      "confidence": 0.9,
+      "evidence": "The candidate states, \"I just use GPT-4 for everything since it's the strongest model,\" indicating they use one model for all tasks without considering specific trade-offs or requirements."
+    },
+    {
+      "competency_id": "eval.llm_judge",
+      "competency_name": "LLM-as-a-judge",
+      "label": 2,
+      "pred": 2,
+      "confidence": 0.9,
+      "evidence": "The candidate states, \"I ask the model 'is this answer good, yes or no?' and go with what it says.\" This indicates they are at the level of asking a model for a simple evaluation, which aligns with the description of an Advanced Beginner (L2)."
+    },
+    {
+      "competency_id": "ft.decision",
+      "competency_name": "When to fine-tune vs RAG vs prompt",
+      "label": 2,
+      "pred": 2,
+      "confidence": 0.9,
+      "evidence": "The candidate's response suggests that they view fine-tuning as a solution when the model isn't performing well, indicating a tendency to see fine-tuning as a default fix. This aligns with the description of an Advanced Beginner who thinks fine-tuning is the default fix."
+    },
+    {
+      "competency_id": "ctx.hallucination",
+      "competency_name": "Hallucination reduction via prompting",
+      "label": 2,
+      "pred": 2,
+      "confidence": 0.9,
+      "evidence": "The candidate states, \"I add a line to the system prompt telling it not to hallucinate,\" which aligns with the L2 anchor of saying 'don't hallucinate'."
+    },
+    {
+      "competency_id": "agents.react_planning",
+      "competency_name": "ReAct & planning loops",
+      "label": 3,
+      "pred": 3,
+      "confidence": 0.9,
+      "evidence": "The candidate mentions using a ReAct loop with a cap on the maximum number of steps and a termination check, indicating they have implemented bounded reasoning loops. They also state that it is running in production for a support bot, showing they have shipped it in real projects and made deliberate trade-offs."
+    },
+    {
+      "competency_id": "prod.fastapi_streaming",
+      "competency_name": "FastAPI + streaming/WebSockets",
+      "label": 3,
+      "pred": 4,
+      "confidence": 0.9,
+      "evidence": "The candidate mentions using FastAPI to stream tokens over SSE, which indicates knowledge of async streaming. They also mention handling client disconnects, which relates to connection handling."
+    },
+    {
+      "competency_id": "eval.regression",
+      "competency_name": "Regression testing",
+      "label": 3,
+      "pred": 3,
+      "confidence": 0.9,
+      "evidence": "The candidate mentions keeping a fixed test set and re-running it to compare outputs and catch regressions before shipping."
+    },
+    {
+      "competency_id": "ctx.system_prompt",
+      "competency_name": "System prompt design",
+      "label": 3,
+      "pred": 4,
+      "confidence": 0.9,
+      "evidence": "The candidate states they write structured system prompts that separate role, constraints, and tool descriptions, which aligns with the L4 anchor of creating structured, testable system prompts."
+    },
+    {
+      "competency_id": "llm.tokens_context",
+      "competency_name": "Tokenization & context windows",
+      "label": 1,
+      "pred": 1,
+      "confidence": 0.9,
+      "evidence": "The candidate states, \"The context window is like how much text it can take. I'm not sure what happens if you go over, maybe it errors?\" This shows they know the term 'context window' but lack understanding of what happens when the prompt exceeds the context window limit."
+    },
+    {
+      "competency_id": "agents.langgraph",
+      "competency_name": "LangGraph (state machines, checkpointing, HITL)",
+      "label": 5,
+      "pred": 4,
+      "confidence": 0.9,
+      "evidence": "The candidate states they model agents as explicit typed state graphs and use subgraphs for modular assess/score stages, indicating a strong understanding of designing state schemas and modularity. They also mention using a Postgres checkpointer for resumability and human-in-the-loop interrupts, which aligns with the proficient level's requirements. Additionally, they wrote a guide for their team, suggesting they have a role in setting patterns for others, although not explicitly mentoring."
+    },
+    {
+      "competency_id": "agents.tool_calling",
+      "competency_name": "Function/tool calling",
+      "label": 5,
+      "pred": 5,
+      "confidence": 0.9,
+      "evidence": "The candidate mentions treating a tool schema as a contract with precise descriptions, validated arguments, and typed errors, which aligns with setting patterns for others and handling novel cases. They also state that they set conventions for tool design and review tools written by other engineers, indicating a mentoring role."
+    }
+  ]
+}

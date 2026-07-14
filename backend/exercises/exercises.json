@@ -1,0 +1,70 @@
+{
+  "description": "Behavioral exercises: the coach sets a concrete task and grades the SUBMITTED ARTIFACT (code), not a self-report. Objective `checks` (regex over the submission) give a keyless, deterministic signal; the code-reading rubric judge integrates them. Keyed by competency_id from competency_map.json.",
+  "exercises": [
+    {
+      "competency_id": "py.async",
+      "title": "Resilient batch of LLM calls",
+      "language": "python",
+      "prompt": "Write an async function `run_batch(prompts, call_llm)` that runs ~500 LLM calls concurrently but safely: cap concurrency, retry transient failures with backoff, apply a per-call timeout, and return results without letting one failure sink the batch.",
+      "rubric": "L4 code: async with an explicit concurrency cap (Semaphore), retry with backoff, per-call timeout (wait_for), and it isolates per-call failures. L2: a plain loop or unbounded gather with no limits/retries/timeouts.",
+      "checks": [
+        { "id": "async", "description": "Uses async/await", "kind": "present", "pattern": "async\\s+def|await\\s|asyncio", "weight": 2 },
+        { "id": "concurrency_cap", "description": "Caps concurrency (Semaphore)", "kind": "present", "pattern": "Semaphore", "weight": 2 },
+        { "id": "retry", "description": "Retries with backoff", "kind": "present", "pattern": "retr(y|ies)|backoff|tenacity|attempt", "weight": 2 },
+        { "id": "timeout", "description": "Applies a timeout", "kind": "present", "pattern": "timeout|wait_for", "weight": 1 },
+        { "id": "isolates_failures", "description": "Handles per-call errors", "kind": "present", "pattern": "try|except|return_exceptions", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "llm.structured_output",
+      "title": "Schema-valid JSON with recovery",
+      "language": "python",
+      "prompt": "Write `get_person(text, call_llm)` that returns a validated object with fields name:str and age:int from the model. Use a schema, validate the output, and recover (retry) on invalid output instead of trusting raw text.",
+      "rubric": "L4: typed schema (Pydantic/JSON schema / structured-output mode), explicit validation, and a retry that feeds the error back. L2: json.loads on free text with no validation or recovery.",
+      "checks": [
+        { "id": "schema", "description": "Uses a schema / typed model", "kind": "present", "pattern": "BaseModel|pydantic|json_schema|response_format|TypedDict", "weight": 2 },
+        { "id": "validation", "description": "Validates the output", "kind": "present", "pattern": "model_validate|validate|parse_obj|ValidationError", "weight": 2 },
+        { "id": "recovery", "description": "Retries on invalid output", "kind": "present", "pattern": "retr(y|ies)|attempt|except", "weight": 2 },
+        { "id": "no_blind_eval", "description": "No eval() of model output", "kind": "absent", "pattern": "\\beval\\s*\\(", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "rag.chunking",
+      "title": "Structure-aware chunker",
+      "language": "python",
+      "prompt": "Write `chunk_document(text)` for legal contracts. Don't just cut every N characters: respect structure (sections/paragraphs), use overlap, and attach metadata to each chunk.",
+      "rubric": "L4: splits on structural boundaries, configurable overlap, per-chunk metadata, reasons about size. L2: fixed-size slicing with no overlap/structure.",
+      "checks": [
+        { "id": "structure", "description": "Splits on structure, not just fixed size", "kind": "present", "pattern": "split|paragraph|section|sentence|boundar|semantic|header|clause", "weight": 2 },
+        { "id": "overlap", "description": "Uses overlap", "kind": "present", "pattern": "overlap", "weight": 2 },
+        { "id": "metadata", "description": "Attaches metadata", "kind": "present", "pattern": "metadata|source|doc_id|section|\"id\"|'id'", "weight": 1 },
+        { "id": "sizing", "description": "Reasons about chunk size", "kind": "present", "pattern": "chunk_size|max_tokens|size|len\\(", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "agents.failure_modes",
+      "title": "Bound a runaway agent loop",
+      "language": "python",
+      "prompt": "Here is an agent loop that can spin forever and blindly trusts tool calls. Rewrite `run_agent(task, tools)` to be reliable: cap the steps, validate tool selection/args, handle tool errors, and terminate cleanly.",
+      "rubric": "L4: explicit step limit, validated tool dispatch, error handling/fallback, clear termination. L2: unbounded while loop, no validation or guards.",
+      "checks": [
+        { "id": "step_limit", "description": "Caps the number of steps", "kind": "present", "pattern": "max_steps|max_iter|range\\(|step\\s*[<>]=?|<=\\s*\\d", "weight": 2 },
+        { "id": "validation", "description": "Validates tool/args", "kind": "present", "pattern": "validate|isinstance|in\\s+tools|schema|allow", "weight": 2 },
+        { "id": "error_handling", "description": "Handles tool errors / fallback", "kind": "present", "pattern": "try|except|fallback|retr(y|ies)", "weight": 1 },
+        { "id": "termination", "description": "Terminates cleanly", "kind": "present", "pattern": "break|return|finish|done|complete", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "safety.prompt_injection",
+      "title": "Harden a doc-reading tool",
+      "language": "python",
+      "prompt": "Write `handle_document(user_doc, run_tool)` where the document is UNTRUSTED and the agent can call tools. Defend against prompt injection: isolate untrusted content, restrict which tools/args are allowed, and never execute instructions from the document.",
+      "rubric": "L4: treats content as data (delimiters/separate channel), tool allow-list with arg checks, no execution of doc-derived commands. L2: concatenates the doc into the prompt and trusts it.",
+      "checks": [
+        { "id": "isolation", "description": "Isolates untrusted content", "kind": "present", "pattern": "untrusted|delimiter|\"\"\"|<data>|<document>|system|separate", "weight": 2 },
+        { "id": "allowlist", "description": "Restricts tools/args", "kind": "present", "pattern": "allow(list|ed)?|whitelist|permission|in\\s+ALLOWED|approved", "weight": 2 },
+        { "id": "no_exec", "description": "No eval/exec/os.system on content", "kind": "absent", "pattern": "\\beval\\s*\\(|\\bexec\\s*\\(|os\\.system", "weight": 2 }
+      ]
+    }
+  ]
+}

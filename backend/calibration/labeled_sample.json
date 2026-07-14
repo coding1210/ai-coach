@@ -1,0 +1,88 @@
+{
+  "description": "Small human-labeled calibration set for the LLM-as-judge. Each answer was labeled L1-L5 by the rubric author against the competency's level anchors in competency_map.json. Includes good/bad answers to the same competency so discrimination is directly measurable.",
+  "rater": "rubric-author (v1)",
+  "samples": [
+    { "competency_id": "py.async", "label": 4,
+      "answer": "For 500 calls I use asyncio.gather behind a semaphore to cap concurrency, wrap each call in a retry with exponential backoff and jitter, set a per-request timeout, and return partial results so one failure doesn't sink the batch.",
+      "note": "async + concurrency limits + backoff + timeouts = L4 anchor" },
+    { "competency_id": "py.async", "label": 2,
+      "answer": "I'd loop over the list and call the API one at a time in a normal for loop, with a try/except around it.",
+      "note": "synchronous loop, basic try/except = L2 anchor" },
+
+    { "competency_id": "llm.structured_output", "label": 4,
+      "answer": "I use the provider's structured-output / JSON-schema mode with a Pydantic model, validate on parse, and if validation fails I retry feeding the error back. I never regex free text.",
+      "note": "schema mode + validation + retry = L4" },
+    { "competency_id": "llm.structured_output", "label": 2,
+      "answer": "I put 'return JSON' in the prompt and then json.loads the response. Usually it works.",
+      "note": "parses free text and hopes = L2 anchor" },
+
+    { "competency_id": "rag.vector_dbs", "label": 4,
+      "answer": "I choose per requirements: pgvector when we already run Postgres and volume is modest, Qdrant when I need rich payload filtering at scale. I design metadata filters up front and pick HNSW vs IVF by the recall/latency trade-off.",
+      "note": "per-requirement choice + metadata + index trade-offs = L4" },
+    { "competency_id": "rag.vector_dbs", "label": 1,
+      "answer": "I've heard of Pinecone. I haven't really set one up, but I think it stores the vectors somewhere.",
+      "note": "knows the term, no real use = L1" },
+
+    { "competency_id": "safety.prompt_injection", "label": 4,
+      "answer": "I treat retrieved and user-supplied content as untrusted, keep instructions and data in separate channels, constrain tool permissions with allow-lists, and red-team with known injection payloads before shipping.",
+      "note": "untrusted content + isolation + limited tool perms = L4" },
+    { "competency_id": "safety.prompt_injection", "label": 1,
+      "answer": "I haven't really thought about it. The documents come from our own users so I trust them.",
+      "note": "trusts inputs = L1" },
+
+    { "competency_id": "rag.retrieval_eval", "label": 4,
+      "answer": "I build a labeled query-to-relevant-doc set and track recall@k, precision, and MRR. I separate retrieval failures from generation failures, and use RAGAS for context precision and faithfulness.",
+      "note": "labeled set + recall/precision + separates failure types = L4" },
+
+    { "competency_id": "rag.chunking", "label": 4,
+      "answer": "Structure-aware chunking on clause and section boundaries for contracts, overlap tuned to the embedding window, metadata per chunk. Chunking drives recall so I test it against a labeled set rather than guess.",
+      "note": "structure-aware + overlap reasoning + measured = L4" },
+
+    { "competency_id": "llm.model_selection", "label": 4,
+      "answer": "I route by task: a small fast model for classification and routing, a stronger model for scoring. I benchmark quality vs latency vs cost per 1k tokens and set per-task defaults with fallbacks.",
+      "note": "routes by quality/latency/cost with fallbacks = L4" },
+    { "competency_id": "llm.model_selection", "label": 2,
+      "answer": "I just use GPT-4 for everything since it's the strongest model.",
+      "note": "one model for everything = L2 anchor" },
+
+    { "competency_id": "eval.llm_judge", "label": 2,
+      "answer": "I ask the model 'is this answer good, yes or no?' and go with what it says.",
+      "note": "asks 'is this good' = L2 anchor" },
+
+    { "competency_id": "ft.decision", "label": 2,
+      "answer": "If the model isn't good enough I'd fine-tune it on more of our data.",
+      "note": "fine-tuning as the default fix = L2 anchor" },
+
+    { "competency_id": "ctx.hallucination", "label": 2,
+      "answer": "I add a line to the system prompt telling it not to hallucinate.",
+      "note": "'don't hallucinate' = L2 anchor" },
+
+    { "competency_id": "agents.react_planning", "label": 3,
+      "answer": "My agent runs a ReAct loop; I cap it at a max number of steps and add a termination check so it can't spin forever. It's been running our support bot in production.",
+      "note": "ships with step limits and termination = L3" },
+
+    { "competency_id": "prod.fastapi_streaming", "label": 3,
+      "answer": "I serve it with FastAPI and stream tokens over SSE so the UI feels responsive, and I handle client disconnects.",
+      "note": "streams over SSE, handles disconnect, real project = L3" },
+
+    { "competency_id": "eval.regression", "label": 3,
+      "answer": "I keep a fixed test set and re-run it whenever I change a prompt, comparing outputs to catch regressions before I ship.",
+      "note": "fixed set re-run on change = L3 (not yet automated in CI)" },
+
+    { "competency_id": "ctx.system_prompt", "label": 3,
+      "answer": "I write structured system prompts that separate role, constraints, and tool descriptions, and I keep them versioned with the code.",
+      "note": "structured + versioned = L3" },
+
+    { "competency_id": "llm.tokens_context", "label": 1,
+      "answer": "The context window is like how much text it can take. I'm not sure what happens if you go over, maybe it errors?",
+      "note": "vague, no real understanding = L1" },
+
+    { "competency_id": "agents.langgraph", "label": 5,
+      "answer": "I model agents as explicit typed state graphs, use subgraphs for modular assess/score stages, a Postgres checkpointer for resumability and human-in-the-loop interrupts, and I wrote our team's guide on when to use conditional edges vs tool calls.",
+      "note": "designs it + sets team patterns + mentors = L5" },
+
+    { "competency_id": "agents.tool_calling", "label": 5,
+      "answer": "I treat a tool schema as a contract: precise descriptions, validated args, typed errors the model can recover from. I set our conventions for tool design and review the tools other engineers write.",
+      "note": "contract-level design + sets conventions + reviews others = L5" }
+  ]
+}
