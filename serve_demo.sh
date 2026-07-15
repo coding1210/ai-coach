@@ -42,6 +42,13 @@ capture_tunnel() { # $1=port → prints public https URL
   echo "$url"
 }
 
+# ── 0. Reclaim ports (a leftover server on 8000/3000 would block us) ──
+echo "▸ Freeing ports 8000 / 3000 if held"
+for p in 8000 3000; do
+  lsof -ti "tcp:$p" 2>/dev/null | xargs kill -9 2>/dev/null || true
+done
+sleep 1
+
 # ── 1. Postgres ──────────────────────────────────────────────────
 echo "▸ Postgres"
 docker compose -f "$ROOT/docker-compose.yml" up -d >/dev/null

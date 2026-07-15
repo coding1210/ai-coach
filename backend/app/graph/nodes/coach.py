@@ -1,12 +1,14 @@
-"""coach — mentor the current focus competency, then pause for the user.
+"""coach — Socratic, short-turn coaching (Options + Will phases of GROW).
 
-Split into two nodes so the LLM generation is never re-run by interrupt resume:
-  coach        → generate the explain → challenge → exercise → resource turn
-                 (LLM), commit it as a message. No interrupt here.
-  coach_await  → interrupt for the user's reply, advance the focus cursor.
+Instead of a four-part lecture, the coach opens each focus area with a brief
+frame and ONE question that gets the engineer thinking (ask-more-than-tell),
+then reacts to their reply with a short reflection that fills the single most
+important gap. Where a competency has a graded exercise, the coach tees up the
+hands-on challenge instead of a talk-only question.
 
-Resource fetching is inline/LLM-suggested in v1; wiring a real research tool-call
-(FR5) is a Phase-2 extension that slots into the `coach` node.
+  coach        → resource tool-call + a short opener (frame + question OR lead-in
+                 to the challenge). Streams. No interrupt.
+  coach_await  → collect the reply, reflect briefly, advance the focus cursor.
 """
 
 from __future__ import annotations
@@ -14,8 +16,10 @@ from __future__ import annotations
 from langgraph.types import interrupt
 
 from app.competency.loader import get_competency_map
-from app.graph.state import CoachState
+from app.eval.exercises import get_exercise_bank
+from app.graph.state import FINISH_ASSESSMENT, CoachState
 from app.graph.streaming import emit, emit_streamed_text
+from app.llm.persona import COACH_PERSONA
 from app.llm.providers import Message
 from app.llm.router import get_router
 from app.llm.tools import research_resource
@@ -30,10 +34,9 @@ async def coach(state: CoachState) -> dict:
 
     competency = cmap.competency(focus[idx])
     domain = cmap.domain_of(competency.id)
-    score = (state.get("scores") or {}).get(competency.id, {})
-    level = score.get("level", 2)
+    level = (state.get("scores") or {}).get(competency.id, {}).get("level", 2)
+    has_exercise = get_exercise_bank().by_competency(competency.id) is not None
 
-    # Agentic step (FR5): fetch a resource for this gap, surfaced as a tool_call.
     resource = await research_resource(domain.id, competency.name)
     emit(
         {
@@ -44,54 +47,60 @@ async def coach(state: CoachState) -> dict:
         }
     )
 
+    if has_exercise:
+        task = (
+            f"You're moving to coach them on {competency.name} (they're around L{level}/5). "
+            "In 2 short sentences: one warm line on why this matters at their level, then say "
+            "you'd rather see it than talk about it — you're going to give them a quick hands-on "
+            "task. Don't explain the solution. (A resource is on hand: "
+            f"'{resource['title']}'.)"
+        )
+    else:
+        task = (
+            f"Coach them on {competency.name} (they're around L{level}/5). In 2-3 short sentences: "
+            "one warm framing line, then ONE Socratic question that makes them reason about the core "
+            "of this at their level. Don't give the answer — draw it out. You may nod to the resource "
+            f"'{resource['title']}' in a clause."
+        )
+
     messages: list[Message] = [
-        {
-            "role": "system",
-            "content": (
-                "You are a senior Gen AI engineering coach running a focused mentoring "
-                "turn on ONE competency. Meet the engineer at their current level and "
-                "move them one step up. Structure the turn as: (1) a crisp explanation "
-                "pitched just above their level, (2) a realistic scenario/challenge, "
-                "(3) one small concrete exercise, (4) point to the provided resource by "
-                "name. Keep it conversational and encouraging — coaching, not lecturing. "
-                "End by inviting them to try the exercise or ask to move on."
-            ),
-        },
-        {
-            "role": "user",
-            "content": (
-                f"Competency: {competency.name} ({competency.id})\n"
-                f"Their current level: L{level} of 5.\n"
-                f"L2 looks like: {competency.level_anchors.get('2', 'n/a')}\n"
-                f"L4 looks like: {competency.level_anchors.get('4', 'n/a')}\n"
-                f"Resource to recommend: {resource['title']} ({resource['url']})\n"
-                "Coach them on this now."
-            ),
-        },
+        {"role": "system", "content": COACH_PERSONA},
+        {"role": "user", "content": task},
     ]
-    provider = get_router().for_task("coach")
-    content = await emit_streamed_text(provider, messages, temperature=0.6, max_tokens=700)
+    content = await emit_streamed_text(
+        get_router().for_task("coach"), messages, temperature=0.6, max_tokens=220
+    )
     return {"phase": "coach", "messages": [{"role": "assistant", "content": content}]}
 
 
 async def coach_await(state: CoachState) -> dict:
     focus = state.get("focus_areas", [])
     idx = state.get("focus_index", 0)
-    competency_id = focus[idx] if idx < len(focus) else None
+    comp_id = focus[idx] if idx < len(focus) else None
 
     reply = interrupt(
-        {
-            "type": "coach_prompt",
-            "competency_id": competency_id,
-            "focus_index": idx,
-            "remaining": max(0, len(focus) - idx - 1),
-        }
+        {"type": "coach_prompt", "competency_id": comp_id, "focus_index": idx}
     )
     reply = (reply or "").strip() if isinstance(reply, str) else str(reply)
 
-    # v1: acknowledge and advance to the next focus area. Interpreting "tell me
-    # more" to stay on the same area is a small Phase-2 refinement.
-    return {
-        "focus_index": idx + 1,
-        "messages": [{"role": "user", "content": reply}],
-    }
+    # A stray finish signal here just means "move on" — don't reflect on it.
+    if reply == FINISH_ASSESSMENT:
+        return {"focus_index": idx + 1}
+
+    out_messages: list[dict] = [{"role": "user", "content": reply}]
+    if comp_id:
+        competency = get_competency_map().competency(comp_id)
+        task = (
+            f'They answered your coaching question about {competency.name} with: "{reply}"\n\n'
+            "In ONE or TWO short sentences: reflect what they got right, gently fill the single most "
+            "important gap, and encourage them to keep going. No lecture, no list."
+        )
+        content = await emit_streamed_text(
+            get_router().for_task("coach"),
+            [{"role": "system", "content": COACH_PERSONA}, {"role": "user", "content": task}],
+            temperature=0.5,
+            max_tokens=180,
+        )
+        out_messages.append({"role": "assistant", "content": content})
+
+    return {"focus_index": idx + 1, "messages": out_messages}

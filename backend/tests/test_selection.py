@@ -13,6 +13,25 @@ def test_next_competency_prefers_highest_weight():
     assert cmap.domain_of(first.id).weight == "critical"
 
 
+def test_next_competency_is_breadth_first_across_domains():
+    cmap = load_competency_map()
+    asked: list[str] = []
+    domains_hit = []
+    for _ in range(6):
+        c = next_competency(cmap, asked)
+        asked.append(c.id)
+        domains_hit.append(cmap.domain_of(c.id).id)
+    # First 6 questions span 6 distinct domains, led by the highest-weight one.
+    assert len(set(domains_hit)) == 6
+    assert domains_hit[0] == "rag"
+
+
+def test_route_after_score_honors_stop_request():
+    from app.graph.edges import route_after_score
+
+    assert route_after_score({"stop_requested": True}) == "report"
+
+
 def test_coverage_grows_and_reaches_one():
     cmap = load_competency_map()
     assert weighted_coverage(cmap, asked=[]) == 0.0

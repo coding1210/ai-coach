@@ -14,6 +14,8 @@ from app.llm.judge import score_answer
 
 
 async def score(state: CoachState) -> dict:
+    if state.get("stop_requested"):
+        return {}  # user ended assessment early; nothing to score
     cmap = get_competency_map()
     competency_id = state.get("current_competency_id")
     if not competency_id:

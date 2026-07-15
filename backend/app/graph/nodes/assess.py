@@ -1,13 +1,13 @@
-"""assess — split into two nodes so interrupt-resume never re-runs work and the
-question flows to the user as a normal message (Design.md §5).
+"""assess — a listening, adaptive assessment turn (Reality phase of GROW).
 
-  assess_ask    → pick the highest-weight unprobed competency, commit its
-                  question to `messages`, mark it asked. No interrupt.
-  assess_await  → interrupt for the user's answer, commit it. Nothing expensive
-                  runs before the interrupt, so resume is idempotent.
+  assess_ask    → reflect on what they just said (one genuine line), then ask ONE
+                  open question probing the next competency — generated live so it
+                  responds to them, not a canned script. Streams. No interrupt.
+  assess_await  → collect the answer (or the finish sentinel). Nothing expensive
+                  before the interrupt, so resume is idempotent.
 
-v1 uses the competency map's seed question verbatim (deterministic). Adaptive
-LLM-generated follow-ups are a deliberate Phase-2 extension of `assess_ask`.
+The competency it targets is chosen by breadth-first weight (baseline) or the
+prior-gap worklist (reassess); the LLM just phrases the reflection + question.
 """
 
 from __future__ import annotations
@@ -16,8 +16,18 @@ from langgraph.types import interrupt
 
 from app.competency.loader import get_competency_map
 from app.competency.selection import next_competency, reassess_targets
-from app.graph.state import CoachState
-from app.graph.streaming import emit
+from app.graph.state import FINISH_ASSESSMENT, CoachState
+from app.graph.streaming import emit_streamed_text
+from app.llm.persona import COACH_PERSONA
+from app.llm.providers import Message
+from app.llm.router import get_router
+
+
+def _last_answer(state: CoachState) -> str | None:
+    for m in reversed(state.get("messages", [])):
+        if m.get("role") == "user":
+            return m["content"]
+    return None
 
 
 async def assess_ask(state: CoachState) -> dict:
@@ -25,31 +35,54 @@ async def assess_ask(state: CoachState) -> dict:
     asked = state.get("asked", [])
 
     if state.get("mode") == "reassess":
-        # Re-probe prior weak areas in priority order, one at a time.
         remaining = [c for c in reassess_targets(cmap, state.get("prior_levels", {})) if c not in asked]
         competency = cmap.competency(remaining[0]) if remaining else None
     else:
         competency = next_competency(cmap, asked)
 
-    if competency is None:  # routing guards this; belt-and-braces
+    if competency is None:  # routing guards this
         return {"phase": "report"}
 
-    emit({"type": "assistant_message", "content": competency.sample_question})
+    last = _last_answer(state)
+    if last:
+        task = (
+            f'They just said: "{last}"\n\n'
+            "In ONE short line, reflect back something specific and genuine about that answer "
+            "(acknowledge what's sharp, or gently note what's thin — no scoring, no praise-padding). "
+            f"Then ask ONE open question that probes: {competency.name}. "
+            f"Use this as the intent to probe (rephrase it naturally, adapt to what they just told you): "
+            f'"{competency.sample_question}". Keep the whole turn to 2-3 sentences.'
+        )
+    else:
+        profile = state.get("profile") or {}
+        task = (
+            f"Open the session warmly in one short line (they're {profile.get('background', 'an engineer')} "
+            f"aiming to {profile.get('goal', 'grow in Gen AI')}). Then ask ONE open question probing "
+            f'{competency.name}, based on: "{competency.sample_question}". 1-2 sentences.'
+        )
+
+    messages: list[Message] = [
+        {"role": "system", "content": COACH_PERSONA},
+        {"role": "user", "content": task},
+    ]
+    content = await emit_streamed_text(
+        get_router().for_task("turn"), messages, temperature=0.5, max_tokens=200
+    )
+
     return {
         "phase": "assess",
         "asked": [competency.id],
         "current_competency_id": competency.id,
-        "current_question": competency.sample_question,
-        "messages": [{"role": "assistant", "content": competency.sample_question}],
+        "current_question": content,
+        "messages": [{"role": "assistant", "content": content}],
     }
 
 
 async def assess_await(state: CoachState) -> dict:
     answer = interrupt(
-        {
-            "type": "awaiting_answer",
-            "competency_id": state.get("current_competency_id"),
-        }
+        {"type": "awaiting_answer", "competency_id": state.get("current_competency_id")}
     )
     answer = (answer or "").strip() if isinstance(answer, str) else str(answer)
+    if answer == FINISH_ASSESSMENT:
+        return {"stop_requested": True}
     return {"messages": [{"role": "user", "content": answer}]}

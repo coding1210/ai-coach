@@ -25,6 +25,7 @@ import uuid
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from langgraph.types import Command
 
+from app.graph.state import FINISH_ASSESSMENT
 from app.models import WSClientMessage, WSServerEvent
 
 log = logging.getLogger(__name__)
@@ -141,7 +142,8 @@ async def session(ws: WebSocket) -> None:
                     "focus_index": 0,
                 }
             else:
-                payload = Command(resume=msg.content)
+                resume_value = FINISH_ASSESSMENT if msg.type == "finish" else msg.content
+                payload = Command(resume=resume_value)
 
             paused = await _run_turn(ws, graph, config, payload, thread_id)
             if paused:

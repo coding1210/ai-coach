@@ -27,6 +27,8 @@ def route_after_score(state: CoachState) -> str:
 
     baseline: until weighted coverage clears the threshold (or the map is
     exhausted). reassess: until the prior weak-area worklist is exhausted."""
+    if state.get("stop_requested"):
+        return "report"
     if state.get("mode") == "reassess":
         return "assess" if _reassess_remaining(state) else "report"
 

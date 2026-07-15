@@ -15,16 +15,27 @@ _COVERAGE_WEIGHTS = {"critical", "high"}
 
 
 def next_competency(cmap: CompetencyMap, asked: list[str]) -> Competency | None:
-    """Highest-weight competency not yet asked. None when everything is covered."""
+    """Next competency to probe, None when everything is covered.
+
+    Breadth-first across domains: pick from the domain probed least so far, with
+    domain weight (Critical→High→…) as the tie-break. So the first few questions
+    span different domains — the radar populates fast and a short session still
+    reads as a real diagnosis — while high-weight domains still lead each round.
+    """
     asked_set = set(asked)
-    candidates = [
-        c for c in cmap.all_competencies() if c.id not in asked_set
-    ]
-    if not candidates:
-        return None
-    # Sort by descending domain weight; ties keep map order (already Critical-first).
-    candidates.sort(key=lambda c: cmap.weight_of(c.id), reverse=True)
-    return candidates[0]
+    best: tuple[int, int, int] | None = None
+    choice: Competency | None = None
+    for order, domain in enumerate(cmap.domains):
+        unasked = [c for c in domain.competencies if c.id not in asked_set]
+        if not unasked:
+            continue
+        probed = len(domain.competencies) - len(unasked)
+        # least-probed first, then higher weight, then map order.
+        key = (probed, -cmap.weight_scale[domain.weight], order)
+        if best is None or key < best:
+            best = key
+            choice = unasked[0]
+    return choice
 
 
 def weighted_coverage(cmap: CompetencyMap, asked: list[str]) -> float:

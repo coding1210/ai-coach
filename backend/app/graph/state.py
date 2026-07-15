@@ -9,6 +9,10 @@ from __future__ import annotations
 import operator
 from typing import Annotated, TypedDict
 
+# Sentinel the client sends (via a "finish" WS message) to end assessment early
+# and jump to the evaluation.
+FINISH_ASSESSMENT = "__finish_assessment__"
+
 
 class CompetencyScore(TypedDict):
     competency_id: str
@@ -35,6 +39,7 @@ class CoachState(TypedDict, total=False):
     # transient assessment cursor
     current_competency_id: str | None
     current_question: str | None
+    stop_requested: bool  # user opted to see results early
 
     # report + coaching
     report: dict | None

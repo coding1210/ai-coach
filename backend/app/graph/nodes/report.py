@@ -16,6 +16,7 @@ from app.competency.loader import get_competency_map
 from app.competency.selection import target_level_for
 from app.graph.state import CoachState
 from app.graph.streaming import emit, emit_streamed_text
+from app.llm.persona import COACH_PERSONA
 from app.llm.providers import Message
 from app.llm.router import get_router
 
@@ -117,9 +118,9 @@ async def _narrative(report: dict, profile: dict, reassess: bool) -> str:
         {
             "role": "system",
             "content": (
-                "You are a Gen AI engineering coach delivering an honest, encouraging "
-                "diagnosis. Be specific and brief (a short paragraph). Growth-mindset "
-                "framing; never say 'you failed'."
+                COACH_PERSONA
+                + "\nRight now you're giving a short spoken summary of their evaluation — "
+                "2-3 sentences, honest and encouraging, naming the focus areas plainly."
             ),
         },
         {"role": "user", "content": user_msg},
