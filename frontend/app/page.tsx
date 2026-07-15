@@ -14,6 +14,17 @@ export default function Home() {
 
   const started = status !== "idle";
 
+  // Toggling voice on reads the message currently on screen (so the coach
+  // "speaks" from where you are, including the opening greeting/question).
+  const toggleVoice = () => {
+    const enabling = !voice.enabled;
+    voice.toggleEnabled();
+    if (enabling) {
+      const last = [...messages].reverse().find((m) => m.role === "assistant");
+      if (last?.content) voice.speakNow(last.content);
+    }
+  };
+
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-6xl px-5 py-8 sm:px-8 sm:py-11">
       <header className="mb-9 flex items-end justify-between gap-4">
@@ -61,7 +72,7 @@ export default function Home() {
               onSend={send}
               voice={{
                 enabled: voice.enabled,
-                toggle: voice.toggleEnabled,
+                toggle: toggleVoice,
                 listening: voice.listening,
                 onMic: () => voice.listen(send),
                 sttSupported: voice.sttSupported,

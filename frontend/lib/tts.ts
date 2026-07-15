@@ -8,6 +8,13 @@
 
 export type TtsEngine = "kokoro" | "webspeech" | "none";
 
+// Web Speech is the default: instant, no download, reliable for a live demo.
+// Kokoro (premium in-browser neural TTS) is opt-in — set localStorage
+// coach_tts="kokoro" to prefer it (it lazy-downloads an ~80MB model).
+function preferKokoro(): boolean {
+  return typeof window !== "undefined" && localStorage.getItem("coach_tts") === "kokoro";
+}
+
 const KOKORO_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX";
 const KOKORO_VOICE = "af_heart";
 
@@ -31,8 +38,9 @@ async function loadKokoro(): Promise<any> {
   return kokoroPromise;
 }
 
-/** Kick off the Kokoro model download early (e.g. when the user enables voice). */
+/** Kick off the Kokoro model download early (only if it's the preferred engine). */
 export function warmupKokoro(): void {
+  if (!preferKokoro()) return;
   loadKokoro().catch(() => {
     /* fall back silently at speak time */
   });
@@ -57,17 +65,21 @@ async function speakKokoro(text: string): Promise<void> {
   await audioEl.play();
 }
 
-/** Speak `text`, preferring Kokoro, returning the engine that actually spoke. */
+/** Speak `text`, returning the engine that actually spoke. Web Speech by
+ * default; Kokoro only when preferred (with Web Speech fallback on any error). */
 export async function speak(text: string): Promise<TtsEngine> {
   const clean = text.replace(/\s+/g, " ").trim();
   if (!clean) return "none";
-  try {
-    await speakKokoro(clean);
-    return "kokoro";
-  } catch {
-    speakWebSpeech(clean);
-    return "webspeech";
+  if (preferKokoro()) {
+    try {
+      await speakKokoro(clean);
+      return "kokoro";
+    } catch {
+      /* fall through to Web Speech */
+    }
   }
+  speakWebSpeech(clean);
+  return "webspeech";
 }
 
 export function stopSpeaking(): void {

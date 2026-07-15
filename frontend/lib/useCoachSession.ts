@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { WS_BASE, ensureSession } from "./api";
 import type {
   ChatMessage,
@@ -16,16 +16,34 @@ interface Options {
   onAssistantDone?: (text: string) => void;
 }
 
-// Drives one coaching session over the WebSocket. Nodes stream custom events;
-// we render assistant text (streamed token-by-token or whole), tool calls, and
-// the structured report, and reflect interrupt/END as `status`.
+const ACTIVE_KEY = "coach_active"; // thread_id of an in-progress session
+
+function storedThread(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ACTIVE_KEY);
+}
+function setActive(threadId: string) {
+  if (typeof window !== "undefined") localStorage.setItem(ACTIVE_KEY, threadId);
+}
+function clearActive() {
+  if (typeof window !== "undefined") localStorage.removeItem(ACTIVE_KEY);
+}
+
+// Drives one coaching session over the WebSocket. Survives page refresh: the
+// active thread_id is persisted and the session is resumed (the graph state
+// lives in the Postgres checkpoint), so a reload continues where you left off.
 export function useCoachSession(opts: Options = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const streamingRef = useRef<boolean>(false);
+  const threadRef = useRef<string | null>(null);
   const onDone = useRef(opts.onAssistantDone);
   onDone.current = opts.onAssistantDone;
 
-  const [status, setStatus] = useState<SessionStatus>("idle");
+  // Start in "connecting" if we're going to auto-resume, to avoid a flash of
+  // the onboarding page on refresh.
+  const [status, setStatus] = useState<SessionStatus>(() =>
+    storedThread() ? "connecting" : "idle"
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [report, setReport] = useState<Report | null>(null);
   const [phase, setPhase] = useState<string>("onboard");
@@ -56,6 +74,10 @@ export function useCoachSession(opts: Options = {}) {
     });
 
   const handleEvent = useCallback((evt: ServerEvent) => {
+    if (evt.thread_id && threadRef.current !== evt.thread_id) {
+      threadRef.current = evt.thread_id;
+      setActive(evt.thread_id);
+    }
     switch (evt.type) {
       case "assistant_message":
         if (evt.content) {
@@ -96,7 +118,6 @@ export function useCoachSession(opts: Options = {}) {
         });
         break;
       case "exercise":
-        // The exercise prompt arrives as an assistant_message; nothing extra to do.
         break;
       case "report":
         if (evt.data) setReport(evt.data as Report);
@@ -108,6 +129,7 @@ export function useCoachSession(opts: Options = {}) {
       case "done":
         if (evt.phase) setPhase(evt.phase);
         setStatus("done");
+        clearActive();
         wsRef.current?.close();
         break;
       case "error":
@@ -117,8 +139,27 @@ export function useCoachSession(opts: Options = {}) {
     }
   }, []);
 
+  const connect = useCallback(
+    (startMsg: Record<string, unknown>) => {
+      const ws = new WebSocket(`${WS_BASE}/ws/session`);
+      wsRef.current = ws;
+      ws.onopen = () => {
+        setStatus("thinking");
+        ws.send(JSON.stringify(startMsg));
+      };
+      ws.onmessage = (e) => handleEvent(JSON.parse(e.data) as ServerEvent);
+      ws.onerror = () => {
+        setError("Could not reach the coach backend. Is it running on :8000?");
+        setStatus("error");
+      };
+    },
+    [handleEvent]
+  );
+
   const start = useCallback(
     async (profile: Profile) => {
+      clearActive();
+      threadRef.current = null;
       setMessages([]);
       setReport(null);
       setError(null);
@@ -133,22 +174,42 @@ export function useCoachSession(opts: Options = {}) {
         return;
       }
       setUserId(session.user_id);
-
-      const ws = new WebSocket(`${WS_BASE}/ws/session`);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        setStatus("thinking");
-        ws.send(JSON.stringify({ type: "start", token: session.token, profile }));
-      };
-      ws.onmessage = (e) => handleEvent(JSON.parse(e.data) as ServerEvent);
-      ws.onerror = () => {
-        setError("Could not reach the coach backend. Is it running on :8000?");
-        setStatus("error");
-      };
+      connect({ type: "start", token: session.token, profile });
     },
-    [handleEvent]
+    [connect]
   );
+
+  const resume = useCallback(async () => {
+    const tid = storedThread();
+    if (!tid) {
+      setStatus("idle");
+      return;
+    }
+    threadRef.current = tid;
+    setMessages([]);
+    setReport(null);
+    setError(null);
+    setStatus("connecting");
+
+    let session;
+    try {
+      session = await ensureSession();
+    } catch {
+      clearActive();
+      setStatus("idle");
+      return;
+    }
+    setUserId(session.user_id);
+    connect({ type: "start", token: session.token, thread_id: tid });
+  }, [connect]);
+
+  // Auto-resume an in-progress session on mount (once).
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resumedRef.current) return;
+    resumedRef.current = true;
+    if (storedThread()) resume();
+  }, [resume]);
 
   const send = useCallback(
     (content: string) => {

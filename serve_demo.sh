@@ -21,6 +21,7 @@ cleanup() {
   # Backstop: kill the child process trees the subshell PIDs don't cover.
   pkill -f "uvicorn app.main:app" 2>/dev/null || true
   pkill -f "next dev" 2>/dev/null || true
+  pkill -f "next start" 2>/dev/null || true
   pkill -f "cloudflared tunnel --url" 2>/dev/null || true
   exit 0
 }
@@ -65,8 +66,16 @@ if [ "$TUNNEL" = "1" ]; then
   echo "  backend public: $API"
 fi
 
+# Production build for the demo: no dev error overlay (Kokoro/onnxruntime emits
+# benign warnings that the dev overlay surfaces as "errors"), and snappier.
+# Set DEV=1 to use `next dev` with hot reload instead.
 echo "▸ Frontend (:3000)"
-( cd "$ROOT/frontend" && npm run dev ) &
+if [ "${DEV:-0}" = "1" ]; then
+  ( cd "$ROOT/frontend" && npm run dev ) &
+else
+  echo "  building…"
+  ( cd "$ROOT/frontend" && npm run build && npm run start ) &
+fi
 pids+=($!)
 wait_url http://localhost:3000
 

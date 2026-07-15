@@ -89,6 +89,13 @@ export function useVoice() {
     [enabled]
   );
 
+  // Speak regardless of the enabled flag (used when the user just turned voice
+  // on, to read the message already on screen).
+  const speakNow = useCallback(async (text: string) => {
+    const engine = await speak(text);
+    setTtsEngine(engine);
+  }, []);
+
   return {
     enabled,
     toggleEnabled,
@@ -97,6 +104,7 @@ export function useVoice() {
     stopListening,
     sttSupported,
     say,
+    speakNow,
     ttsEngine,
   };
 }
