@@ -61,6 +61,45 @@ async def _run_turn(ws: WebSocket, graph, config: dict, payload, thread_id: str)
     return False
 
 
+async def _resume(ws: WebSocket, graph, config: dict, thread_id: str, user_id: str) -> bool:
+    """Replay a checkpointed session to the client and re-signal its phase.
+    Returns False if there's no owned checkpoint (caller falls back to a fresh start)."""
+    snap = await graph.aget_state(config)
+    if not snap.created_at or snap.values.get("user_id") != user_id:
+        return False
+
+    for m in snap.values.get("messages", []):
+        if m.get("role") == "assistant":
+            await ws.send_json(
+                {"type": "assistant_message", "content": m["content"], "thread_id": thread_id}
+            )
+    if snap.values.get("report"):
+        await ws.send_json(
+            WSServerEvent(
+                type="report", thread_id=thread_id, data=snap.values["report"]
+            ).model_dump(exclude_none=True)
+        )
+
+    if snap.next:  # paused at an interrupt → tell the client what it's awaiting
+        interrupts = [i for t in snap.tasks for i in getattr(t, "interrupts", ())]
+        pv = interrupts[0].value if interrupts and isinstance(interrupts[0].value, dict) else {}
+        phase = {"coach_prompt": "coach", "awaiting_submission": "challenge"}.get(
+            pv.get("type"), "assess"
+        )
+        await ws.send_json(
+            WSServerEvent(
+                type="phase", thread_id=thread_id, phase=phase, data=pv or None
+            ).model_dump(exclude_none=True)
+        )
+    else:
+        await ws.send_json(
+            WSServerEvent(
+                type="done", thread_id=thread_id, phase=snap.values.get("phase")
+            ).model_dump(exclude_none=True)
+        )
+    return True
+
+
 @router.websocket("/ws/session")
 async def session(ws: WebSocket) -> None:
     await ws.accept()
@@ -87,6 +126,12 @@ async def session(ws: WebSocket) -> None:
                     return
                 thread_id = msg.thread_id or str(uuid.uuid4())
                 config = {"configurable": {"thread_id": thread_id, "repo": repo}}
+
+                # Resume an existing, owned thread: replay the transcript + report
+                # from the checkpoint and re-signal the current phase — no re-run.
+                if msg.thread_id and await _resume(ws, graph, config, thread_id, user_id):
+                    continue
+
                 payload = {
                     "thread_id": thread_id,
                     "user_id": user_id,
