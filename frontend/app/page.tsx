@@ -9,7 +9,7 @@ import { useVoice } from "@/lib/useVoice";
 
 export default function Home() {
   const voice = useVoice();
-  const { status, messages, report, phase, error, start, send } =
+  const { status, messages, report, phase, error, start, send, finish } =
     useCoachSession({ onAssistantDone: voice.say });
 
   const started = status !== "idle";
@@ -70,6 +70,7 @@ export default function Home() {
               status={status}
               phase={phase}
               onSend={send}
+              onFinish={finish}
               voice={{
                 enabled: voice.enabled,
                 toggle: toggleVoice,

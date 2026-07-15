@@ -18,10 +18,6 @@ from app.graph.streaming import emit
 
 
 async def onboard(state: CoachState, config: RunnableConfig) -> dict:
-    profile = state.get("profile") or {}
-    goal = profile.get("goal", "grow as a Gen AI engineer")
-    background = profile.get("background", "your background")
-
     repo = (config.get("configurable") or {}).get("repo")
     prior_levels: dict[str, int] = {}
     if repo is not None:
@@ -57,11 +53,9 @@ async def onboard(state: CoachState, config: RunnableConfig) -> dict:
         }
 
     greeting = (
-        "Hi — I'm your Gen AI engineering coach. This isn't a test or a course: "
-        "I'll ask a few open questions to find where you're strong and where the "
-        f"biggest leverage is for someone with {background} aiming to {goal}. "
-        "Answer as you actually would on the job — there are no trick questions. "
-        "Let's start."
+        "Hey — good to meet you. I'm your Gen AI coach, and this is a conversation, "
+        "not a test: I'll ask a few real questions to find where you're strong and where "
+        "the biggest leverage is. Answer like you would on the job — let's dive in."
     )
     emit({"type": "assistant_message", "content": greeting})
     return {

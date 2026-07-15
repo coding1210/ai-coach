@@ -222,5 +222,13 @@ export function useCoachSession(opts: Options = {}) {
     [status]
   );
 
-  return { status, messages, report, phase, error, userId, start, send };
+  // End assessment early and jump to the evaluation (no visible message).
+  const finish = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws || status !== "awaiting_input") return;
+    setStatus("thinking");
+    ws.send(JSON.stringify({ type: "finish" }));
+  }, [status]);
+
+  return { status, messages, report, phase, error, userId, start, send, finish };
 }

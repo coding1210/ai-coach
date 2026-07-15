@@ -26,12 +26,14 @@ export default function Chat({
   status,
   phase,
   onSend,
+  onFinish,
   voice,
 }: {
   messages: ChatMessage[];
   status: SessionStatus;
   phase: string;
   onSend: (content: string) => void;
+  onFinish: () => void;
   voice: VoiceControls;
 }) {
   const [draft, setDraft] = useState("");
@@ -107,6 +109,19 @@ export default function Chat({
       </div>
 
       <div className="border-t border-edge/70 p-3">
+        {phase === "assess" && canSend && (
+          <div className="mb-2 flex justify-end">
+            <button
+              onClick={onFinish}
+              className="group flex items-center gap-1.5 text-xs text-dim transition-colors duration-200 hover:text-accent"
+            >
+              Answered enough? See my evaluation
+              <span className="transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
+                →
+              </span>
+            </button>
+          </div>
+        )}
         <div className="flex items-end gap-2">
           {voice.enabled && voice.sttSupported && (
             <button
