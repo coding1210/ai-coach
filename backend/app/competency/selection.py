@@ -14,15 +14,28 @@ from app.competency.loader import CompetencyMap, Competency
 _COVERAGE_WEIGHTS = {"critical", "high"}
 
 
-def next_competency(cmap: CompetencyMap, asked: list[str]) -> Competency | None:
+def next_competency(
+    cmap: CompetencyMap, asked: list[str], scores: dict | None = None
+) -> Competency | None:
     """Next competency to probe, None when everything is covered.
 
-    Breadth-first across domains: pick from the domain probed least so far, with
-    domain weight (Critical→High→…) as the tie-break. So the first few questions
-    span different domains — the radar populates fast and a short session still
-    reads as a real diagnosis — while high-weight domains still lead each round.
+    Breadth-first across domains (pick the least-probed domain, weight as
+    tie-break) so the first few questions span domains and the radar fills fast.
+    Once answers come in it becomes confidence-driven: a domain that scored below
+    target or with low confidence gets a "dig" bonus, so the coach revisits weak
+    or uncertain areas sooner instead of marching on — closing the loop.
     """
     asked_set = set(asked)
+    scores = scores or {}
+
+    def dig_bonus(domain) -> int:
+        target = target_level_for(domain.weight)
+        for c in domain.competencies:
+            s = scores.get(c.id)
+            if s and (s["level"] < target or s.get("confidence", 1.0) < 0.6):
+                return 1  # weak/uncertain here — worth going deeper
+        return 0
+
     best: tuple[int, int, int] | None = None
     choice: Competency | None = None
     for order, domain in enumerate(cmap.domains):
@@ -30,8 +43,9 @@ def next_competency(cmap: CompetencyMap, asked: list[str]) -> Competency | None:
         if not unasked:
             continue
         probed = len(domain.competencies) - len(unasked)
-        # least-probed first, then higher weight, then map order.
-        key = (probed, -cmap.weight_scale[domain.weight], order)
+        # least "effective probed" first (dig bonus pulls weak domains up),
+        # then higher weight, then map order.
+        key = (probed - dig_bonus(domain), -cmap.weight_scale[domain.weight], order)
         if best is None or key < best:
             best = key
             choice = unasked[0]

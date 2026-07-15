@@ -9,7 +9,7 @@ import { useVoice } from "@/lib/useVoice";
 
 export default function Home() {
   const voice = useVoice();
-  const { status, messages, report, phase, error, start, send, finish } =
+  const { status, messages, report, phase, error, notice, start, send, finish } =
     useCoachSession({ onAssistantDone: voice.say });
 
   const started = status !== "idle";
@@ -57,6 +57,13 @@ export default function Home() {
       {error && (
         <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/[0.07] px-4 py-2.5 text-sm text-red-300">
           {error}
+        </div>
+      )}
+
+      {notice && (
+        <div className="mx-auto mb-6 flex max-w-2xl items-start gap-2 rounded-lg border border-warn/40 bg-warn/10 px-4 py-2.5 text-sm text-warn">
+          <span aria-hidden="true">⚠</span>
+          <span>{notice}</span>
         </div>
       )}
 

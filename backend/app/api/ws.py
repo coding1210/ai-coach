@@ -26,7 +26,13 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from langgraph.types import Command
 
 from app.graph.state import FINISH_ASSESSMENT
+from app.llm.router import get_router
 from app.models import WSClientMessage, WSServerEvent
+
+_DEGRADED_NOTICE = (
+    "Heads up: the coach isn't reaching the real models right now, so it's running "
+    "in demo mode — scores and answers are placeholders, not a real diagnosis."
+)
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -109,6 +115,7 @@ async def session(ws: WebSocket) -> None:
 
     thread_id: str | None = None
     config: dict | None = None
+    notified_degraded = False
 
     try:
         while True:
@@ -146,6 +153,16 @@ async def session(ws: WebSocket) -> None:
                 payload = Command(resume=resume_value)
 
             paused = await _run_turn(ws, graph, config, payload, thread_id)
+
+            # If a provider failed and we fell back to Fake, tell the user once.
+            if not notified_degraded and get_router().degraded:
+                notified_degraded = True
+                await ws.send_json(
+                    WSServerEvent(
+                        type="notice", thread_id=thread_id, content=_DEGRADED_NOTICE
+                    ).model_dump(exclude_none=True)
+                )
+
             if paused:
                 continue
 

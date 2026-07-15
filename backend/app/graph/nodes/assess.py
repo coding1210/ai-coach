@@ -20,7 +20,6 @@ from app.graph.state import FINISH_ASSESSMENT, CoachState
 from app.graph.streaming import emit_streamed_text
 from app.llm.persona import COACH_PERSONA
 from app.llm.providers import Message
-from app.llm.router import get_router
 
 
 def _last_answer(state: CoachState) -> str | None:
@@ -38,7 +37,8 @@ async def assess_ask(state: CoachState) -> dict:
         remaining = [c for c in reassess_targets(cmap, state.get("prior_levels", {})) if c not in asked]
         competency = cmap.competency(remaining[0]) if remaining else None
     else:
-        competency = next_competency(cmap, asked)
+        # Confidence-driven: bias toward weak/uncertain domains via prior scores.
+        competency = next_competency(cmap, asked, state.get("scores", {}))
 
     if competency is None:  # routing guards this
         return {"phase": "report"}
@@ -65,9 +65,7 @@ async def assess_ask(state: CoachState) -> dict:
         {"role": "system", "content": COACH_PERSONA},
         {"role": "user", "content": task},
     ]
-    content = await emit_streamed_text(
-        get_router().for_task("turn"), messages, temperature=0.5, max_tokens=200
-    )
+    content = await emit_streamed_text("turn", messages, temperature=0.5, max_tokens=200)
 
     return {
         "phase": "assess",
