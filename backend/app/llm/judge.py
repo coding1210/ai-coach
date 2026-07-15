@@ -67,8 +67,7 @@ async def score_answer(
 ) -> dict[str, Any]:
     """Return a CompetencyScore-shaped dict: {competency_id, level, evidence, confidence}."""
     messages = build_judge_messages(competency, question, answer)
-    provider = get_router().for_task("score")
-    raw = await provider.complete_json(messages, schema=JUDGE_SCHEMA, temperature=0.0)
+    raw = await get_router().complete_json("score", messages, schema=JUDGE_SCHEMA, temperature=0.0)
 
     level = int(raw.get("level", 3))
     level = max(1, min(5, level))

@@ -18,7 +18,6 @@ from app.graph.state import CoachState
 from app.graph.streaming import emit, emit_streamed_text
 from app.llm.persona import COACH_PERSONA
 from app.llm.providers import Message
-from app.llm.router import get_router
 
 
 def build_report(scores: dict, cmap, prior_levels: dict[str, int] | None = None) -> dict:
@@ -125,8 +124,7 @@ async def _narrative(report: dict, profile: dict, reassess: bool) -> str:
         },
         {"role": "user", "content": user_msg},
     ]
-    provider = get_router().for_task("report")
-    return await emit_streamed_text(provider, messages, temperature=0.4, max_tokens=400)
+    return await emit_streamed_text("report", messages, temperature=0.4, max_tokens=400)
 
 
 async def report(state: CoachState) -> dict:

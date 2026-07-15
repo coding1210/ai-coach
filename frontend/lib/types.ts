@@ -83,6 +83,7 @@ export interface ServerEvent {
     | "grade"
     | "report"
     | "phase"
+    | "notice"
     | "done"
     | "error";
   thread_id?: string;

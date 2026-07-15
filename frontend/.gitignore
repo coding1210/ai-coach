@@ -5,3 +5,6 @@ next-env.d.ts
 .env.local
 .DS_Store
 *.tsbuildinfo
+
+# impeccable design-hook cache
+.impeccable/

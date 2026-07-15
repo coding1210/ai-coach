@@ -84,4 +84,5 @@ app.include_router(routes.router)
 async def health() -> dict:
     from app.llm.router import get_router
 
-    return {"status": "ok", "llm_providers": get_router().available}
+    router = get_router()
+    return {"status": "ok", "llm_providers": router.available, "degraded": router.degraded}

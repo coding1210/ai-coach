@@ -79,9 +79,8 @@ async def grade_submission(exercise: Exercise, submission: str) -> dict[str, Any
     """Return {competency_id, level, evidence, confidence, checks, deterministic_score}."""
     checks, det_score = run_checks(exercise, submission)
 
-    provider = get_router().for_task("score")
-    raw = await provider.complete_json(
-        _judge_messages(exercise, submission, checks), schema=JUDGE_SCHEMA, temperature=0.0
+    raw = await get_router().complete_json(
+        "score", _judge_messages(exercise, submission, checks), schema=JUDGE_SCHEMA, temperature=0.0
     )
 
     judged = max(1, min(5, int(raw.get("level", 3))))

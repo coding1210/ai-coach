@@ -48,6 +48,7 @@ export function useCoachSession(opts: Options = {}) {
   const [report, setReport] = useState<Report | null>(null);
   const [phase, setPhase] = useState<string>("onboard");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [userId, setUserId] = useState<string>("");
 
   const append = (m: ChatMessage) => setMessages((prev) => [...prev, m]);
@@ -122,6 +123,9 @@ export function useCoachSession(opts: Options = {}) {
       case "report":
         if (evt.data) setReport(evt.data as Report);
         break;
+      case "notice":
+        if (evt.content) setNotice(evt.content);
+        break;
       case "phase":
         if (evt.phase) setPhase(evt.phase);
         setStatus("awaiting_input");
@@ -163,6 +167,7 @@ export function useCoachSession(opts: Options = {}) {
       setMessages([]);
       setReport(null);
       setError(null);
+      setNotice(null);
       setStatus("connecting");
 
       let session;
@@ -230,5 +235,5 @@ export function useCoachSession(opts: Options = {}) {
     ws.send(JSON.stringify({ type: "finish" }));
   }, [status]);
 
-  return { status, messages, report, phase, error, userId, start, send, finish };
+  return { status, messages, report, phase, error, notice, userId, start, send, finish };
 }

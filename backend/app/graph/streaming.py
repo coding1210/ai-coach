@@ -30,13 +30,16 @@ def emit(event: dict) -> None:
         writer(event)
 
 
-async def emit_streamed_text(provider, messages, *, temperature: float, max_tokens: int) -> str:
-    """Stream a provider completion token-by-token as custom events and return
-    the full text (still committed to state for history/persistence)."""
+async def emit_streamed_text(task: str, messages, *, temperature: float, max_tokens: int) -> str:
+    """Stream a completion for `task` token-by-token as custom events and return
+    the full text. Routes through the resilient router (timeout + failover), so a
+    flaky provider degrades to Fake instead of killing the turn."""
+    from app.llm.router import get_router
+
     emit({"type": "message_start"})
     parts: list[str] = []
-    async for token in provider.stream(
-        messages, temperature=temperature, max_tokens=max_tokens
+    async for token in get_router().stream(
+        task, messages, temperature=temperature, max_tokens=max_tokens
     ):
         parts.append(token)
         emit({"type": "token", "text": token})

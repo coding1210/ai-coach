@@ -21,7 +21,6 @@ from app.graph.state import FINISH_ASSESSMENT, CoachState
 from app.graph.streaming import emit, emit_streamed_text
 from app.llm.persona import COACH_PERSONA
 from app.llm.providers import Message
-from app.llm.router import get_router
 from app.llm.tools import research_resource
 
 
@@ -67,9 +66,7 @@ async def coach(state: CoachState) -> dict:
         {"role": "system", "content": COACH_PERSONA},
         {"role": "user", "content": task},
     ]
-    content = await emit_streamed_text(
-        get_router().for_task("coach"), messages, temperature=0.6, max_tokens=220
-    )
+    content = await emit_streamed_text("coach", messages, temperature=0.6, max_tokens=220)
     return {"phase": "coach", "messages": [{"role": "assistant", "content": content}]}
 
 
@@ -96,7 +93,7 @@ async def coach_await(state: CoachState) -> dict:
             "important gap, and encourage them to keep going. No lecture, no list."
         )
         content = await emit_streamed_text(
-            get_router().for_task("coach"),
+            "coach",
             [{"role": "system", "content": COACH_PERSONA}, {"role": "user", "content": task}],
             temperature=0.5,
             max_tokens=180,
