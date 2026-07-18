@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from app.competency.loader import get_competency_map
 from app.competency.selection import next_competency, reassess_targets
-from app.graph.state import MAX_LEVEL, QUESTIONS_PER_LEVEL, CoachState
+from app.graph.state import INTERVIEW_QUESTIONS, MAX_LEVEL, QUESTIONS_PER_LEVEL, CoachState
 
 
 def _reassess_remaining(state: CoachState) -> list[str]:
@@ -25,6 +25,8 @@ def _more_to_ask(state: CoachState) -> bool:
 
 
 def route_after_onboard(state: CoachState) -> str:
+    if state.get("mode") == "interview":
+        return "interview_ask"
     if state.get("mode") == "reassess" and not _reassess_remaining(state):
         return "report"
     return "ask"
@@ -35,10 +37,19 @@ def route_after_triage(state: CoachState) -> str:
     return "score" if state.get("intent", "answer") == "answer" else "aside"
 
 
+def route_after_aside(state: CoachState) -> str:
+    """Return to whichever await the current mode uses."""
+    return "interview_await" if state.get("mode") == "interview" else "await_answer"
+
+
 def route_after_score(state: CoachState) -> str:
-    """Keep asking until the level's batch is done (or we run out), then review."""
+    """Route the scored answer: interview loops until the debrief; coaching runs
+    the level batch then a review."""
+    interview = state.get("mode") == "interview"
     if state.get("stop_requested"):
-        return "report"
+        return "interview_debrief" if interview else "report"
+    if interview:
+        return "interview_ask" if state.get("iv_count", 0) < INTERVIEW_QUESTIONS else "interview_debrief"
     if state.get("level_q_count", 0) < QUESTIONS_PER_LEVEL and _more_to_ask(state):
         return "ask"
     return "review"

@@ -108,6 +108,27 @@ async def _parse_jd(profile: dict) -> tuple[dict[str, int], str]:
 
 
 async def onboard(state: CoachState, config: RunnableConfig) -> dict:
+    # Mock-interview mode takes precedence over the coaching flow.
+    if state.get("requested_mode") == "interview":
+        profile = state.get("profile") or {}
+        jd_targets, role_title = await _parse_jd(profile)
+        role = role_title or "a senior Gen AI engineer"
+        intro = (
+            f"Alright — let's run a mock interview for {role}. I'll ask a handful of realistic "
+            "questions and dig into your answers like a real interviewer would. Think out loud, "
+            "and don't stress about being perfect. Ready? Here's the first one."
+        )
+        emit({"type": "assistant_message", "content": intro})
+        return {
+            "phase": "interview",
+            "mode": "interview",
+            "iv_count": 0,
+            "scores": {},
+            "jd_targets": jd_targets,
+            "role_title": role_title,
+            "messages": [{"role": "assistant", "content": intro}],
+        }
+
     repo = (config.get("configurable") or {}).get("repo")
     prior_levels: dict[str, int] = {}
     if repo is not None:

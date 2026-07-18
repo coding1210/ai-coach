@@ -81,6 +81,7 @@ class WSClientMessage(BaseModel):
     token: str | None = None  # bearer token (on start) → resolves the user
     content: str = ""
     profile: dict | None = None  # goal, background, target_role (on start)
+    mode: str | None = None  # coach | interview (on start)
 
 
 class WSServerEvent(BaseModel):

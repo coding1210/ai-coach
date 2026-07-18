@@ -42,6 +42,23 @@ function CompetencyRow({ c, showGap }: { c: CompetencyEntry; showGap?: boolean }
   );
 }
 
+function VerdictBadge({ verdict }: { verdict: string }) {
+  const positive = verdict === "Strong hire" || verdict === "Lean hire";
+  const negative = verdict === "Not yet";
+  const cls = positive
+    ? "border-accent/40 bg-accent/10 text-accent"
+    : negative
+      ? "border-warn/40 bg-warn/10 text-warn"
+      : "border-edge-strong bg-ink/50 text-mid";
+  return (
+    <span
+      className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] ${cls}`}
+    >
+      {verdict}
+    </span>
+  );
+}
+
 function SectionLabel({ tone, children }: { tone: "warn" | "accent"; children: React.ReactNode }) {
   return (
     <h3
@@ -66,14 +83,17 @@ export default function ReportPanel({
     <div className="space-y-7">
       <div>
         <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
-          Evaluation
+          {report.interview ? "Interview debrief" : "Evaluation"}
           {speaking && (
             <span className="signal-speaking inline-block h-1.5 w-1.5 rounded-full bg-accent" />
           )}
         </span>
-        <h2 className="mt-1 text-lg font-semibold tracking-[-0.01em] text-hi">
-          Where you stand
-        </h2>
+        <div className="mt-1 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold tracking-[-0.01em] text-hi">
+            Where you stand
+          </h2>
+          {report.verdict && <VerdictBadge verdict={report.verdict} />}
+        </div>
         {report.role_title && (
           <p className="mt-1 text-xs text-accent">
             Targets set for: {report.role_title}

@@ -18,6 +18,9 @@ QUESTIONS_PER_LEVEL = 3
 MAX_LEVEL = 3
 PASS_MAX_WEAK = 1  # a level is "passed" with at most this many weak answers
 
+# Mock-interview mode: number of interview questions before the debrief.
+INTERVIEW_QUESTIONS = 5
+
 LEVELS = {
     1: {
         "name": "Foundations",
@@ -63,6 +66,11 @@ class CoachState(TypedDict, total=False):
     current_competency_id: str | None
     current_question: str | None
     stop_requested: bool  # user opted to see results early
+
+    # mode selection + mock interview
+    requested_mode: str                              # from the client start message (coach | interview)
+    iv_count: int                                    # interview questions asked
+    verdict: str                                     # interview debrief verdict
 
     # leveled assessment
     level: int                                       # 1..MAX_LEVEL (difficulty tier)
