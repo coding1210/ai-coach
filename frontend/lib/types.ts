@@ -55,6 +55,7 @@ export interface Report {
   radar: RadarDomain[];
   priorities: string[];
   competencies_assessed: number;
+  role_title?: string; // set when targets came from a pasted JD
 }
 
 export interface LedgerEntry {
@@ -69,6 +70,7 @@ export interface Profile {
   goal: string;
   background: string;
   target_role: string;
+  jd?: string; // optional pasted job description → role-specific targets
 }
 
 // WebSocket server → client events.

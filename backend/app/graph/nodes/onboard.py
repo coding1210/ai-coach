@@ -56,6 +56,57 @@ async def _calibrate(profile: dict) -> tuple[int, bool]:
         return 1, False
 
 
+async def _parse_jd(profile: dict) -> tuple[dict[str, int], str]:
+    """Map a pasted job description onto the competency domains → per-domain target
+    levels + a role title. Empty/failed → ({}, '') so targets fall back to generic."""
+    jd = (profile or {}).get("jd", "").strip()
+    if not jd:
+        return {}, ""
+    cmap = get_competency_map()
+    dids = [d.id for d in cmap.domains]
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "role_title": {"type": "string"},
+            "targets": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {d: {"type": "integer"} for d in dids},
+                "required": dids,
+            },
+        },
+        "required": ["role_title", "targets"],
+    }
+    domain_list = "; ".join(f"{d.id} = {d.name}" for d in cmap.domains)
+    try:
+        r = await get_router().complete_json(
+            "report",
+            [
+                {"role": "system", "content": "You map a job description onto Gen AI competency domains. JSON only."},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Job description:\n{jd[:4000]}\n\nFor THIS role, rate each domain's required "
+                        "proficiency: 5 = core/critical, 3 = solid, 1 = nice-to-have, 0 = not relevant. "
+                        f"Domains: {domain_list}. Also give a short role_title. "
+                        "Return {role_title, targets:{domain_id: level}}."
+                    ),
+                },
+            ],
+            schema=schema,
+            temperature=0,
+        )
+        targets = {
+            d: max(0, min(5, int(v)))
+            for d, v in (r.get("targets") or {}).items()
+            if d in dids
+        }
+        return targets, str(r.get("role_title", "")).strip()
+    except Exception:  # noqa: BLE001
+        return {}, ""
+
+
 async def onboard(state: CoachState, config: RunnableConfig) -> dict:
     repo = (config.get("configurable") or {}).get("repo")
     prior_levels: dict[str, int] = {}
@@ -94,7 +145,9 @@ async def onboard(state: CoachState, config: RunnableConfig) -> dict:
             "messages": [{"role": "assistant", "content": greeting}],
         }
 
-    level, beginner = await _calibrate(state.get("profile") or {})
+    profile = state.get("profile") or {}
+    level, beginner = await _calibrate(profile)
+    jd_targets, role_title = await _parse_jd(profile)
     if beginner:
         greeting = (
             "Hey — great to have you here. No pressure and no jargon: I'll ask a few plain "
@@ -107,6 +160,8 @@ async def onboard(state: CoachState, config: RunnableConfig) -> dict:
             "not a test: I'll ask a few real questions to find where you're strong and where "
             "the biggest leverage is. Answer like you would on the job — let's dive in."
         )
+    if role_title:
+        greeting += f" I'll measure you against the {role_title} bar you're aiming for."
     emit({"type": "assistant_message", "content": greeting})
     return {
         "phase": "assess",
@@ -116,5 +171,7 @@ async def onboard(state: CoachState, config: RunnableConfig) -> dict:
         "beginner": beginner,
         "level_q_count": 0,
         "level_competencies": [],
+        "jd_targets": jd_targets,
+        "role_title": role_title,
         "messages": [{"role": "assistant", "content": greeting}],
     }

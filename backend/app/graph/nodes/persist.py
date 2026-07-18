@@ -11,7 +11,7 @@ from __future__ import annotations
 from langchain_core.runnables import RunnableConfig
 
 from app.competency.loader import get_competency_map
-from app.competency.selection import target_level_for
+from app.competency.selection import target_for
 from app.graph.state import CoachState
 from app.graph.streaming import emit
 from app.models import AssessmentEvent
@@ -53,7 +53,7 @@ async def persist(state: CoachState, config: RunnableConfig) -> dict:
     await repo.record_assessments(session_id, user_id, events)
 
     for cid, s in scores.items():
-        target = target_level_for(cmap.domain_of(cid).weight)
+        target = target_for(cmap, cid, state.get("jd_targets"))
         await repo.upsert_ledger_entry(
             user_id, cid, current_level=s["level"], target_level=target
         )

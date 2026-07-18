@@ -33,6 +33,7 @@ export default function Onboarding({
     goal: "",
     background: "",
     target_role: "",
+    jd: "",
   });
 
   const set = (k: keyof Profile) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -77,6 +78,15 @@ export default function Onboarding({
               value={profile.target_role}
               onChange={set("target_role")}
               placeholder="e.g. Senior Gen AI Engineer"
+            />
+          </Field>
+          <Field label="Target job description (optional)">
+            <textarea
+              className="coach-input"
+              rows={3}
+              value={profile.jd ?? ""}
+              onChange={(e) => setProfile((p) => ({ ...p, jd: e.target.value }))}
+              placeholder="Paste a JD and the coach measures your gaps against that exact role."
             />
           </Field>
         </div>

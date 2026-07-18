@@ -84,4 +84,8 @@ class CoachState(TypedDict, total=False):
     mode: str                                        # baseline | reassess
     prior_levels: dict[str, int]                     # competency_id -> last current_level
 
+    # JD-targeted diagnosis
+    jd_targets: dict[str, int]                       # domain_id -> required level (from the JD)
+    role_title: str                                  # role parsed from the JD
+
     phase: str  # onboard | assess | review | coach | done

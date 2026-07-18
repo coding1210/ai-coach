@@ -13,14 +13,16 @@ from __future__ import annotations
 from collections import defaultdict
 
 from app.competency.loader import get_competency_map
-from app.competency.selection import target_level_for
+from app.competency.selection import target_for
 from app.graph.state import CoachState
 from app.graph.streaming import emit, emit_streamed_text
 from app.llm.persona import COACH_PERSONA
 from app.llm.providers import Message
 
 
-def build_report(scores: dict, cmap, prior_levels: dict[str, int] | None = None) -> dict:
+def build_report(
+    scores: dict, cmap, prior_levels: dict[str, int] | None = None, jd_targets: dict | None = None
+) -> dict:
     prior_levels = prior_levels or {}
     strengths: list[dict] = []
     weaknesses: list[dict] = []
@@ -31,7 +33,7 @@ def build_report(scores: dict, cmap, prior_levels: dict[str, int] | None = None)
     scored = []
     for cid, s in scores.items():
         domain = cmap.domain_of(cid)
-        target = target_level_for(domain.weight)
+        target = target_for(cmap, cid, jd_targets)
         gap = max(0, target - s["level"])
         priority = gap * cmap.weight_scale[domain.weight]
         prev = prior_levels.get(cid)
@@ -112,11 +114,13 @@ async def _narrative(report: dict, profile: dict, reassess: bool, level: int, be
             "celebrates the growth specifically, is honest about what still needs work."
         )
     else:
+        role = report.get("role_title", "")
+        role_line = f"Targets are set against the {role} role they're aiming for. " if role else ""
         user_msg = (
-            f"They just finished a leveled assessment and reached Level {level} of 3 "
-            f"(Foundations → Application → Design). Strengths: {strong}. Soft spots we touched: {top}. "
-            "Give a short, warm CLOSING summary — where they landed and the one or two things worth "
-            "sharpening next. 2-3 sentences."
+            f"{role_line}They just finished a leveled assessment and reached Level {level} of 3 "
+            f"(Foundations → Application → Design). Strengths: {strong}. Soft spots vs that bar: {top}. "
+            "Give a short, warm CLOSING summary — where they landed relative to the target and the one "
+            "or two things worth sharpening next. 2-3 sentences."
         )
 
     messages: list[Message] = [
@@ -152,7 +156,8 @@ async def report(state: CoachState) -> dict:
             }
     merged.update(scores)
 
-    built = build_report(merged, cmap, prior_levels=prior)
+    built = build_report(merged, cmap, prior_levels=prior, jd_targets=state.get("jd_targets") or {})
+    built["role_title"] = state.get("role_title", "")
     narrative = await _narrative(
         built, state.get("profile") or {}, reassess, state.get("level", 1), state.get("beginner", False)
     )
