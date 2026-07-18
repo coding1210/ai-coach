@@ -14,6 +14,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.graph import nodes
 from app.graph.edges import (
+    route_after_aside,
     route_after_coach_light,
     route_after_consent,
     route_after_onboard,
@@ -38,16 +39,39 @@ def build_graph(checkpointer):
     g.add_node("consent_await", nodes.consent_await)
     g.add_node("coach_light", nodes.coach_light)
     g.add_node("next_level", nodes.next_level)
+    g.add_node("interview_ask", nodes.interview_ask)
+    g.add_node("interview_await", nodes.interview_await)
+    g.add_node("interview_debrief", nodes.interview_debrief)
     g.add_node("report", nodes.report)
     g.add_node("persist", nodes.persist)
 
     g.add_edge(START, "onboard")
-    g.add_conditional_edges("onboard", route_after_onboard, {"ask": "ask", "report": "report"})
+    g.add_conditional_edges(
+        "onboard",
+        route_after_onboard,
+        {"ask": "ask", "report": "report", "interview_ask": "interview_ask"},
+    )
     g.add_edge("ask", "await_answer")
     g.add_edge("await_answer", "triage")
     g.add_conditional_edges("triage", route_after_triage, {"score": "score", "aside": "aside"})
-    g.add_edge("aside", "await_answer")
-    g.add_conditional_edges("score", route_after_score, {"ask": "ask", "review": "level_review", "report": "report"})
+    g.add_conditional_edges(
+        "aside", route_after_aside, {"await_answer": "await_answer", "interview_await": "interview_await"}
+    )
+    g.add_conditional_edges(
+        "score",
+        route_after_score,
+        {
+            "ask": "ask",
+            "review": "level_review",
+            "report": "report",
+            "interview_ask": "interview_ask",
+            "interview_debrief": "interview_debrief",
+        },
+    )
+    # Interview loop
+    g.add_edge("interview_ask", "interview_await")
+    g.add_edge("interview_await", "triage")
+    g.add_edge("interview_debrief", "persist")
     g.add_conditional_edges(
         "level_review",
         route_after_review,

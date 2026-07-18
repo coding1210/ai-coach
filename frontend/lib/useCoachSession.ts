@@ -173,7 +173,7 @@ export function useCoachSession(opts: Options = {}) {
   );
 
   const start = useCallback(
-    async (profile: Profile) => {
+    async (profile: Profile, mode: string = "coach") => {
       clearActive();
       threadRef.current = null;
       setMessages([]);
@@ -191,7 +191,7 @@ export function useCoachSession(opts: Options = {}) {
         return;
       }
       setUserId(session.user_id);
-      connect({ type: "start", token: session.token, profile });
+      connect({ type: "start", token: session.token, profile, mode });
     },
     [connect]
   );

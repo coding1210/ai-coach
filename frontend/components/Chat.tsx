@@ -9,6 +9,7 @@ const PHASE_LABEL: Record<string, string> = {
   report: "Building evaluation",
   coach: "Coaching",
   challenge: "Challenge",
+  interview: "Interview",
   done: "Session complete",
 };
 
@@ -74,7 +75,9 @@ export default function Chat({
             </h1>
           </div>
           <p className="mt-0.5 pl-3.5 text-xs text-faint">
-            coaching, not a course — diagnosing your gaps
+            {phase === "interview"
+              ? "mock interview — probing your depth for the role"
+              : "coaching, not a course — diagnosing your gaps"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -109,13 +112,15 @@ export default function Chat({
       </div>
 
       <div className="border-t border-edge/70 p-3">
-        {phase === "assess" && canSend && (
+        {(phase === "assess" || phase === "interview") && canSend && (
           <div className="mb-2 flex justify-end">
             <button
               onClick={onFinish}
               className="group flex items-center gap-1.5 text-xs text-dim transition-colors duration-200 hover:text-accent"
             >
-              Answered enough? See my evaluation
+              {phase === "interview"
+                ? "Wrap up the interview & debrief"
+                : "Answered enough? See my evaluation"}
               <span className="transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
                 →
               </span>

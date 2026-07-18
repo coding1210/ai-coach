@@ -58,3 +58,38 @@ async def test_full_loop_runs_to_done_and_persists():
     entry = progress[0]
     assert entry.baseline_level is not None and entry.target_level is not None
     assert await repo.get_latest_report("u1") is not None
+
+
+@pytest.mark.asyncio
+async def test_interview_mode_runs_to_debrief_with_verdict():
+    """Interview mode loops through questions and ends in a debrief with a
+    hiring verdict on the report — never a coaching offer."""
+    repo = MemoryRepository()
+    graph = build_graph(InMemorySaver())
+    config = {"configurable": {"thread_id": "iv1", "repo": repo}}
+    initial = {
+        "thread_id": "iv1",
+        "user_id": "u1",
+        "session_id": "iv1",
+        "profile": {"goal": "senior Gen AI role", "background": "backend dev"},
+        "requested_mode": "interview",
+        "scores": {},
+        "focus_index": 0,
+    }
+
+    result = await graph.ainvoke(initial, config=config)
+
+    guard = 0
+    while result.get("__interrupt__"):
+        guard += 1
+        assert guard < 200, "interview loop did not converge"
+        # Every pause in interview mode awaits an interview answer.
+        assert result["__interrupt__"][0].value.get("type") == "interview_answer"
+        result = await graph.ainvoke(Command(resume=_ANSWER), config=config)
+
+    assert result.get("phase") == "done"
+
+    report = result.get("report")
+    assert report and report.get("interview") is True
+    assert report.get("verdict") in {"Strong hire", "Lean hire", "Borderline", "Not yet"}
+    assert result.get("verdict") == report.get("verdict")

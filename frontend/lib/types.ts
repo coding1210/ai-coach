@@ -56,6 +56,8 @@ export interface Report {
   priorities: string[];
   competencies_assessed: number;
   role_title?: string; // set when targets came from a pasted JD
+  verdict?: string; // hiring read, set in interview mode
+  interview?: boolean; // true when produced by a mock-interview session
 }
 
 export interface LedgerEntry {

@@ -26,7 +26,7 @@ export default function Onboarding({
   onStart,
   disabled,
 }: {
-  onStart: (p: Profile) => void;
+  onStart: (p: Profile, mode: string) => void;
   disabled?: boolean;
 }) {
   const [profile, setProfile] = useState<Profile>({
@@ -35,6 +35,7 @@ export default function Onboarding({
     target_role: "",
     jd: "",
   });
+  const [mode, setMode] = useState<"coach" | "interview">("coach");
 
   const set = (k: keyof Profile) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setProfile((p) => ({ ...p, [k]: e.target.value }));
@@ -45,15 +46,39 @@ export default function Onboarding({
     <div className="mx-auto max-w-lg animate-rise-in rounded-2xl border border-edge/70 bg-white/[0.015] p-1.5 shadow-panel">
       <div className="rounded-[13px] border border-edge/60 bg-panel p-6 sm:p-7">
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
-          New assessment
+          {mode === "interview" ? "Mock interview" : "New assessment"}
         </span>
         <h2 className="mt-2.5 text-xl font-semibold tracking-[-0.01em] text-hi">
-          Tell your coach where you&apos;re headed
+          {mode === "interview"
+            ? "Sit a mock interview for the role"
+            : "Tell your coach where you're headed"}
         </h2>
         <p className="mt-1.5 text-sm leading-relaxed text-dim text-pretty">
-          No syllabus. The coach uses this to diagnose your specific gaps and
-          coach those — progress means movement on your own weak areas.
+          {mode === "interview"
+            ? "A realistic interviewer probes your depth on the role, then debriefs with a hire verdict and where you stand. No coaching mid-interview."
+            : "No syllabus. The coach uses this to diagnose your specific gaps and coach those — progress means movement on your own weak areas."}
         </p>
+
+        <div className="mt-5 grid grid-cols-2 gap-1 rounded-lg border border-edge/70 bg-black/20 p-1">
+          {(
+            [
+              ["coach", "Coaching"],
+              ["interview", "Mock interview"],
+            ] as const
+          ).map(([m, label]) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`rounded-md px-3 py-2 text-xs font-medium transition-[background,color] duration-200 ease-out-quart ${
+                mode === m
+                  ? "bg-accent text-accent-ink"
+                  : "text-mid hover:text-hi"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         <div className="mt-6 space-y-4">
           <Field label="Your goal">
@@ -108,10 +133,10 @@ export default function Onboarding({
 
         <button
           disabled={!ready || disabled}
-          onClick={() => onStart(profile)}
+          onClick={() => onStart(profile, mode)}
           className="group mt-7 flex w-full items-center justify-center gap-2.5 rounded-md bg-accent px-4 py-3 text-sm font-semibold text-accent-ink transition-[transform,box-shadow] duration-200 ease-out-quart hover:shadow-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 disabled:shadow-none disabled:active:scale-100"
         >
-          Start assessment
+          {mode === "interview" ? "Start interview" : "Start assessment"}
           <span className="grid h-5 w-5 place-items-center rounded-full bg-accent-ink/15 transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
             →
           </span>

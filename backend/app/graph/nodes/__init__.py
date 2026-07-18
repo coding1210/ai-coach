@@ -1,4 +1,5 @@
 from app.graph.nodes.assess import ask, await_answer
+from app.graph.nodes.interview import interview_ask, interview_await, interview_debrief
 from app.graph.nodes.level import (
     coach_light,
     coach_offer,
@@ -19,6 +20,9 @@ __all__ = [
     "triage",
     "aside",
     "score",
+    "interview_ask",
+    "interview_await",
+    "interview_debrief",
     "level_review",
     "coach_offer",
     "consent_await",

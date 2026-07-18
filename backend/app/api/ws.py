@@ -52,7 +52,7 @@ async def _run_turn(ws: WebSocket, graph, config: dict, payload, thread_id: str)
 
     if interrupt_value is not None:
         ptype = interrupt_value.get("type") if isinstance(interrupt_value, dict) else None
-        phase = {"coaching_consent": "coach"}.get(ptype, "assess")
+        phase = {"coaching_consent": "coach", "interview_answer": "interview"}.get(ptype, "assess")
         await ws.send_json(
             WSServerEvent(
                 type="phase",
@@ -87,7 +87,7 @@ async def _resume(ws: WebSocket, graph, config: dict, thread_id: str, user_id: s
     if snap.next:  # paused at an interrupt → tell the client what it's awaiting
         interrupts = [i for t in snap.tasks for i in getattr(t, "interrupts", ())]
         pv = interrupts[0].value if interrupts and isinstance(interrupts[0].value, dict) else {}
-        phase = {"coaching_consent": "coach"}.get(pv.get("type"), "assess")
+        phase = {"coaching_consent": "coach", "interview_answer": "interview"}.get(pv.get("type"), "assess")
         await ws.send_json(
             WSServerEvent(
                 type="phase", thread_id=thread_id, phase=phase, data=pv or None
@@ -140,6 +140,7 @@ async def session(ws: WebSocket) -> None:
                     "user_id": user_id,
                     "session_id": thread_id,
                     "profile": msg.profile or {},
+                    "requested_mode": msg.mode or "coach",
                     "scores": {},
                     "focus_index": 0,
                 }
