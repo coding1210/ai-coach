@@ -49,6 +49,9 @@ async def onboard(state: CoachState, config: RunnableConfig) -> dict:
             "phase": "assess",
             "mode": "reassess",
             "prior_levels": prior_levels,
+            "level": 1,
+            "level_q_count": 0,
+            "level_competencies": [],
             "messages": [{"role": "assistant", "content": greeting}],
         }
 
@@ -62,5 +65,8 @@ async def onboard(state: CoachState, config: RunnableConfig) -> dict:
         "phase": "assess",
         "mode": "baseline",
         "prior_levels": {},
+        "level": 1,
+        "level_q_count": 0,
+        "level_competencies": [],
         "messages": [{"role": "assistant", "content": greeting}],
     }

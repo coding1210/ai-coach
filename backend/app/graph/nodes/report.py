@@ -91,7 +91,7 @@ def build_report(scores: dict, cmap, prior_levels: dict[str, int] | None = None)
     }
 
 
-async def _narrative(report: dict, profile: dict, reassess: bool) -> str:
+async def _narrative(report: dict, profile: dict, reassess: bool, level: int) -> str:
     top = ", ".join(w["competency_name"] for w in report["weaknesses"][:3]) or "none major"
     strong = ", ".join(s["competency_name"] for s in report["strengths"][:3]) or "still forming"
     growth = report.get("growth", {})
@@ -103,14 +103,14 @@ async def _narrative(report: dict, profile: dict, reassess: bool) -> str:
         user_msg = (
             f"This is a RE-ASSESSMENT. Movement since last time: {moved}. "
             f"Remaining top gaps: {top}. Write a short, encouraging spoken update that "
-            "celebrates the growth specifically, is honest about what still needs work, "
-            "and frames next steps. Growth mindset; no 'you failed'."
+            "celebrates the growth specifically, is honest about what still needs work."
         )
     else:
         user_msg = (
-            f"Profile: {profile}\nStrengths: {strong}\nTop gaps to coach: {top}\n"
-            "Write the spoken summary that introduces their evaluation and the areas "
-            "we'll focus on."
+            f"They just finished a leveled assessment and reached Level {level} of 3 "
+            f"(Foundations → Application → Design). Strengths: {strong}. Soft spots we touched: {top}. "
+            "Give a short, warm CLOSING summary — where they landed and the one or two things worth "
+            "sharpening next. 2-3 sentences."
         )
 
     messages: list[Message] = [
@@ -147,7 +147,7 @@ async def report(state: CoachState) -> dict:
     merged.update(scores)
 
     built = build_report(merged, cmap, prior_levels=prior)
-    narrative = await _narrative(built, state.get("profile") or {}, reassess)
+    narrative = await _narrative(built, state.get("profile") or {}, reassess, state.get("level", 1))
     emit({"type": "report", "data": built})
     return {
         "phase": "report",

@@ -13,6 +13,29 @@ from typing import Annotated, TypedDict
 # and jump to the evaluation.
 FINISH_ASSESSMENT = "__finish_assessment__"
 
+# Leveled adaptive assessment: start easy, ramp up, gate on mastery.
+QUESTIONS_PER_LEVEL = 3
+MAX_LEVEL = 3
+PASS_MAX_WEAK = 1  # a level is "passed" with at most this many weak answers
+
+LEVELS = {
+    1: {
+        "name": "Foundations",
+        "expected": 2,  # judged level below this = a weak spot at this tier
+        "probe": "a foundational question that checks whether they genuinely understand the basics of {name}",
+    },
+    2: {
+        "name": "Application",
+        "expected": 3,
+        "probe": "how they've applied {name} in a real project — push on the deliberate trade-offs they made",
+    },
+    3: {
+        "name": "Design & Debugging",
+        "expected": 4,
+        "probe": "a realistic failure or design scenario for {name} and ask how they'd diagnose or architect it",
+    },
+}
+
 
 class CompetencyScore(TypedDict):
     competency_id: str
@@ -41,13 +64,22 @@ class CoachState(TypedDict, total=False):
     current_question: str | None
     stop_requested: bool  # user opted to see results early
 
+    # leveled assessment
+    level: int                                       # 1..MAX_LEVEL (difficulty tier)
+    level_q_count: int                               # questions asked in current level
+    level_competencies: list[str]                    # competency_ids probed this level
+    weak_spots: list[str]                            # competency_ids flagged this level
+    level_passed: bool                               # cleared the mastery gate this level
+    wants_coaching: bool                             # user opted into coaching on weak spots
+    stop_requested: bool                             # user ended assessment early
+
     # report + coaching
     report: dict | None
-    focus_areas: list[str]                           # competency_ids to coach
-    focus_index: int                                 # cursor into focus_areas
+    focus_areas: list[str]                           # competency_ids to coach (legacy)
+    focus_index: int
 
     # re-assessment (returning user)
     mode: str                                        # baseline | reassess
     prior_levels: dict[str, int]                     # competency_id -> last current_level
 
-    phase: str  # onboard | assess | report | coach | done
+    phase: str  # onboard | assess | review | coach | done

@@ -1,11 +1,15 @@
-"""Conditional edges for the coaching graph (Design.md §2)."""
+"""Conditional edges for the leveled coaching graph.
+
+Flow: onboard → (ask → await → score)×N per level → level_review →
+[weak? coach_offer → consent → maybe coach_light] → mastery gate →
+next_level (loop) or report → persist.
+"""
 
 from __future__ import annotations
 
 from app.competency.loader import get_competency_map
 from app.competency.selection import next_competency, reassess_targets
-from app.config import get_settings
-from app.graph.state import CoachState
+from app.graph.state import MAX_LEVEL, QUESTIONS_PER_LEVEL, CoachState
 
 
 def _reassess_remaining(state: CoachState) -> list[str]:
@@ -14,46 +18,46 @@ def _reassess_remaining(state: CoachState) -> list[str]:
     return [c for c in targets if c not in asked]
 
 
+def _more_to_ask(state: CoachState) -> bool:
+    if state.get("mode") == "reassess":
+        return bool(_reassess_remaining(state))
+    return next_competency(get_competency_map(), state.get("asked", [])) is not None
+
+
 def route_after_onboard(state: CoachState) -> str:
-    """A returning user with nothing below target skips straight to the report;
-    everyone else starts assessing."""
     if state.get("mode") == "reassess" and not _reassess_remaining(state):
         return "report"
-    return "assess"
+    return "ask"
 
 
 def route_after_score(state: CoachState) -> str:
-    """Keep assessing, then move to the report.
-
-    baseline: until weighted coverage clears the threshold (or the map is
-    exhausted). reassess: until the prior weak-area worklist is exhausted."""
+    """Keep asking until the level's batch is done (or we run out), then review."""
     if state.get("stop_requested"):
         return "report"
-    if state.get("mode") == "reassess":
-        return "assess" if _reassess_remaining(state) else "report"
+    if state.get("level_q_count", 0) < QUESTIONS_PER_LEVEL and _more_to_ask(state):
+        return "ask"
+    return "review"
 
-    threshold = get_settings().coverage_threshold
-    coverage = state.get("coverage", 0.0)
-    more_to_ask = next_competency(get_competency_map(), state.get("asked", [])) is not None
-    if coverage < threshold and more_to_ask:
-        return "assess"
+
+def _gate(state: CoachState) -> str:
+    """Mastery gate: advance only if the level was passed and there's a level left."""
+    if state.get("level_passed") and state.get("level", 1) < MAX_LEVEL and _more_to_ask(state):
+        return "next_level"
     return "report"
 
 
-def route_after_coach(state: CoachState) -> str:
-    """After teaching a focus area: if it has a graded exercise, run the
-    challenge; otherwise just ask for a reply."""
-    from app.eval.exercises import get_exercise_bank
-
-    focus = state.get("focus_areas", [])
-    idx = state.get("focus_index", 0)
-    if idx < len(focus) and get_exercise_bank().by_competency(focus[idx]) is not None:
-        return "challenge"
-    return "reply"
+def route_after_review(state: CoachState) -> str:
+    """Offer coaching if there are weak spots; otherwise apply the gate."""
+    if state.get("weak_spots"):
+        return "offer"
+    return _gate(state)
 
 
-def route_after_coach_await(state: CoachState) -> str:
-    """Loop through focus areas, then persist."""
-    if state.get("focus_index", 0) < len(state.get("focus_areas", [])):
-        return "coach"
-    return "persist"
+def route_after_consent(state: CoachState) -> str:
+    if state.get("wants_coaching"):
+        return "coach_light"
+    return _gate(state)
+
+
+def route_after_coach_light(state: CoachState) -> str:
+    return _gate(state)
