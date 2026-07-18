@@ -55,12 +55,21 @@ function SectionLabel({ tone, children }: { tone: "warn" | "accent"; children: R
   );
 }
 
-export default function ReportPanel({ report }: { report: Report }) {
+export default function ReportPanel({
+  report,
+  speaking,
+}: {
+  report: Report;
+  speaking?: boolean;
+}) {
   return (
     <div className="space-y-7">
       <div>
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
+        <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
           Evaluation
+          {speaking && (
+            <span className="signal-speaking inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+          )}
         </span>
         <h2 className="mt-1 text-lg font-semibold tracking-[-0.01em] text-hi">
           Where you stand

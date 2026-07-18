@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { WS_BASE, ensureSession } from "./api";
+import { WS_BASE, clearSession, ensureSession } from "./api";
 import type {
   ChatMessage,
   Profile,
@@ -136,10 +136,22 @@ export function useCoachSession(opts: Options = {}) {
         clearActive();
         wsRef.current?.close();
         break;
-      case "error":
-        setError(evt.content ?? "Unknown error");
-        setStatus("error");
+      case "error": {
+        const msg = evt.content ?? "Unknown error";
+        // Stale token (e.g. backend restarted in-memory) — forget it and drop
+        // cleanly back to onboarding so the next Start mints a fresh session.
+        if (/unauthor|token/i.test(msg)) {
+          clearSession();
+          clearActive();
+          setMessages([]);
+          setError(null);
+          setStatus("idle");
+        } else {
+          setError(msg);
+          setStatus("error");
+        }
         break;
+      }
     }
   }, []);
 

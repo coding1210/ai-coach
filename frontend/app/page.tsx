@@ -90,7 +90,11 @@ export default function Home() {
           </Panel>
 
           <Panel scroll>
-            {report ? <ReportPanel report={report} /> : <EmptyReport />}
+            {report ? (
+              <ReportPanel report={report} speaking={voice.speaking} />
+            ) : (
+              <EmptyReport speaking={voice.speaking} />
+            )}
           </Panel>
         </div>
       )}
@@ -119,10 +123,14 @@ function Panel({
   );
 }
 
-function EmptyReport() {
+function EmptyReport({ speaking }: { speaking?: boolean }) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-      <svg viewBox="0 0 96 96" className="h-20 w-20 opacity-70" aria-hidden="true">
+      <svg
+        viewBox="0 0 96 96"
+        className={`h-20 w-20 opacity-70 ${speaking ? "signal-speaking" : ""}`}
+        aria-hidden="true"
+      >
         <path d="M48 10 86 48 48 86 10 48Z" fill="none" stroke="#262a32" strokeWidth="1.5" />
         <path d="M48 26 70 48 48 70 26 48Z" fill="none" stroke="#262a32" strokeWidth="1.5" />
         <path
@@ -134,7 +142,7 @@ function EmptyReport() {
         />
       </svg>
       <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.2em] text-faint">
-        Awaiting signal
+        {speaking ? "Coach speaking…" : "Awaiting signal"}
       </p>
       <p className="mt-2 max-w-xs text-sm leading-relaxed text-dim text-pretty">
         Your evaluation — strengths, gaps, and a current-vs-target radar — builds

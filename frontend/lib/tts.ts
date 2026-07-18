@@ -46,13 +46,27 @@ export function warmupKokoro(): void {
   });
 }
 
-function speakWebSpeech(text: string): void {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1.03;
-  u.pitch = 1.0;
-  window.speechSynthesis.speak(u);
+// Resolves when speech actually FINISHES (so callers can track "speaking").
+// A length-based timeout is a safety net so the flag never sticks on.
+function speakWebSpeech(text: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return resolve();
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.03;
+    u.pitch = 1.0;
+    let done = false;
+    const finish = () => {
+      if (!done) {
+        done = true;
+        resolve();
+      }
+    };
+    u.onend = finish;
+    u.onerror = finish;
+    window.speechSynthesis.speak(u);
+    setTimeout(finish, Math.min(30000, Math.max(1500, text.length * 70)));
+  });
 }
 
 async function speakKokoro(text: string): Promise<void> {
@@ -61,8 +75,20 @@ async function speakKokoro(text: string): Promise<void> {
   const url = URL.createObjectURL(audio.toBlob());
   audioEl?.pause();
   audioEl = new Audio(url);
-  audioEl.onended = () => URL.revokeObjectURL(url);
-  await audioEl.play();
+  await new Promise<void>((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (!done) {
+        done = true;
+        URL.revokeObjectURL(url);
+        resolve();
+      }
+    };
+    audioEl!.onended = finish;
+    audioEl!.onerror = finish;
+    audioEl!.play().catch(finish);
+    setTimeout(finish, Math.min(30000, Math.max(1500, text.length * 70)));
+  });
 }
 
 /** Speak `text`, returning the engine that actually spoke. Web Speech by
@@ -78,7 +104,7 @@ export async function speak(text: string): Promise<TtsEngine> {
       /* fall through to Web Speech */
     }
   }
-  speakWebSpeech(clean);
+  await speakWebSpeech(clean);
   return "webspeech";
 }
 
