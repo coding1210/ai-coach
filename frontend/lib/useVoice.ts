@@ -17,7 +17,9 @@ function getRecognition(): any {
 
 export function useVoice() {
   const recRef = useRef<any>(null);
-  const [enabled, setEnabled] = useState(false);
+  // Voice on by default: the 'Start' click unlocks browser audio, so the
+  // greeting and replies speak automatically. Users can mute with the toggle.
+  const [enabled, setEnabled] = useState(true);
   const [listening, setListening] = useState(false);
   const [sttSupported, setSttSupported] = useState(true);
   const [ttsEngine, setTtsEngine] = useState<TtsEngine>("none");
