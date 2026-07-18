@@ -1,4 +1,4 @@
-import type { CompetencyEntry, Report } from "@/lib/types";
+import type { CompetencyEntry, Report, RoadmapMilestone } from "@/lib/types";
 import RadarChart from "./RadarChart";
 
 function LevelBar({ current, target }: { current: number; target: number }) {
@@ -56,6 +56,47 @@ function VerdictBadge({ verdict }: { verdict: string }) {
     >
       {verdict}
     </span>
+  );
+}
+
+function MilestoneCard({ m }: { m: RoadmapMilestone }) {
+  return (
+    <li className="rounded-md border border-edge/60 bg-raised px-3 py-3">
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent/15 font-mono text-[11px] font-semibold text-accent">
+          {m.rank}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium text-hi">{m.competency_name}</span>
+            <span className="nums whitespace-nowrap font-mono text-[11px] text-dim">
+              L{m.from_level}
+              <span className="text-faint"> → </span>L{m.target_level}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-faint">{m.why}</p>
+
+          <p className="mt-2 text-xs leading-relaxed text-dim">
+            <span className="text-mid">What good looks like: </span>
+            {m.focus}
+          </p>
+
+          <ul className="mt-2 space-y-1">
+            {m.practice.map((p, i) => (
+              <li key={i} className="flex gap-1.5 text-xs leading-relaxed text-mid">
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-2 border-t border-edge/50 pt-2 text-xs leading-relaxed text-dim">
+            <span className="text-accent">Signal · </span>
+            {m.signal}
+          </p>
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -117,6 +158,19 @@ export default function ReportPanel({
           <ul className="space-y-2">
             {report.weaknesses.slice(0, 5).map((c) => (
               <CompetencyRow key={c.competency_id} c={c} showGap />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {report.roadmap && report.roadmap.milestones.length > 0 && (
+        <section>
+          <SectionLabel tone="accent">
+            Your growth path · {report.roadmap.horizon}
+          </SectionLabel>
+          <ul className="space-y-2">
+            {report.roadmap.milestones.map((m) => (
+              <MilestoneCard key={m.competency_id} m={m} />
             ))}
           </ul>
         </section>

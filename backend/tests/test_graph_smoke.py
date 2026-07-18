@@ -48,6 +48,17 @@ async def test_full_loop_runs_to_done_and_persists():
     assert report and report["competencies_assessed"] >= 3
     assert isinstance(report["priorities"], list)
 
+    # A personalized coaching roadmap was attached, one milestone per top gap.
+    roadmap = report.get("roadmap")
+    assert roadmap and roadmap["milestones"], "expected a roadmap with milestones"
+    m0 = roadmap["milestones"][0]
+    assert m0["rank"] == 1
+    assert m0["target_level"] >= m0["from_level"]
+    assert len(m0["practice"]) >= 2 and m0["signal"]
+    # Milestones follow the report's priority order (priorities is the top 3).
+    ids = [m["competency_id"] for m in roadmap["milestones"]]
+    assert ids[: len(report["priorities"])] == report["priorities"]
+
     # It climbed through the difficulty levels (fake judge clears L1/L2, hits its
     # ceiling at L3 where the tier expects L4).
     assert result.get("level", 1) >= 2
