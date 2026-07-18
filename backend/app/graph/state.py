@@ -66,6 +66,7 @@ class CoachState(TypedDict, total=False):
 
     # leveled assessment
     level: int                                       # 1..MAX_LEVEL (difficulty tier)
+    beginner: bool                                   # little/no Python-AI background — keep it plain
     level_q_count: int                               # questions asked in current level
     level_competencies: list[str]                    # competency_ids probed this level
     weak_spots: list[str]                            # competency_ids flagged this level

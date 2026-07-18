@@ -91,12 +91,18 @@ def build_report(scores: dict, cmap, prior_levels: dict[str, int] | None = None)
     }
 
 
-async def _narrative(report: dict, profile: dict, reassess: bool, level: int) -> str:
+async def _narrative(report: dict, profile: dict, reassess: bool, level: int, beginner: bool = False) -> str:
     top = ", ".join(w["competency_name"] for w in report["weaknesses"][:3]) or "none major"
     strong = ", ".join(s["competency_name"] for s in report["strengths"][:3]) or "still forming"
     growth = report.get("growth", {})
 
-    if reassess:
+    if beginner and not reassess:
+        user_msg = (
+            f"They're early in the Gen AI journey. Strengths so far: {strong}. First things to learn: {top}. "
+            "In 2-3 warm sentences: be encouraging, honest that this coach assumes a little Python/AI exposure, "
+            "and name the ONE foundational thing worth starting with. No jargon."
+        )
+    elif reassess:
         moved = "; ".join(
             f"{g['competency_name']} L{g['from']}→L{g['to']}" for g in growth.get("improved", [])[:4]
         ) or "no measurable movement yet"
@@ -147,7 +153,9 @@ async def report(state: CoachState) -> dict:
     merged.update(scores)
 
     built = build_report(merged, cmap, prior_levels=prior)
-    narrative = await _narrative(built, state.get("profile") or {}, reassess, state.get("level", 1))
+    narrative = await _narrative(
+        built, state.get("profile") or {}, reassess, state.get("level", 1), state.get("beginner", False)
+    )
     emit({"type": "report", "data": built})
     return {
         "phase": "report",
