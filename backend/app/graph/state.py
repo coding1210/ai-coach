@@ -70,6 +70,7 @@ class CoachState(TypedDict, total=False):
     level_q_count: int                               # questions asked in current level
     level_competencies: list[str]                    # competency_ids probed this level
     weak_spots: list[str]                            # competency_ids flagged this level
+    intent: str                                      # triage of the last answer (answer|distress|…)
     level_passed: bool                               # cleared the mastery gate this level
     wants_coaching: bool                             # user opted into coaching on weak spots
     stop_requested: bool                             # user ended assessment early
