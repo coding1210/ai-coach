@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import type { CompetencyEntry, Report, RoadmapMilestone } from "@/lib/types";
+import ChallengePanel from "./ChallengePanel";
 import RadarChart from "./RadarChart";
 
 function LevelBar({ current, target }: { current: number; target: number }) {
@@ -60,6 +64,7 @@ function VerdictBadge({ verdict }: { verdict: string }) {
 }
 
 function MilestoneCard({ m }: { m: RoadmapMilestone }) {
+  const [achieved, setAchieved] = useState<number | null>(null);
   return (
     <li className="rounded-md border border-edge/60 bg-raised px-3 py-3">
       <div className="flex items-start gap-2.5">
@@ -72,6 +77,16 @@ function MilestoneCard({ m }: { m: RoadmapMilestone }) {
             <span className="nums whitespace-nowrap font-mono text-[11px] text-dim">
               L{m.from_level}
               <span className="text-faint"> → </span>L{m.target_level}
+              {achieved !== null && (
+                <span
+                  className={
+                    achieved >= m.target_level ? "text-accent" : "text-mid"
+                  }
+                >
+                  {" "}
+                  · now L{achieved}
+                </span>
+              )}
             </span>
           </div>
           <p className="mt-0.5 text-[11px] text-faint">{m.why}</p>
@@ -94,6 +109,10 @@ function MilestoneCard({ m }: { m: RoadmapMilestone }) {
             <span className="text-accent">Signal · </span>
             {m.signal}
           </p>
+
+          {m.has_exercise && (
+            <ChallengePanel milestone={m} onGraded={setAchieved} />
+          )}
         </div>
       </div>
     </li>

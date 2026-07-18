@@ -63,6 +63,30 @@ export interface RoadmapMilestone {
   why: string;
   practice: string[];
   signal: string;
+  has_exercise?: boolean; // a graded code challenge exists for this competency
+}
+
+export interface Exercise {
+  competency_id: string;
+  title: string;
+  language: string;
+  prompt: string;
+}
+
+export interface GradeCheck {
+  id: string;
+  description: string;
+  passed: boolean;
+}
+
+export interface GradeResult {
+  competency_id: string;
+  level: number;
+  target_level: number;
+  confidence: number;
+  deterministic_score: number;
+  evidence: string;
+  checks: GradeCheck[];
 }
 
 export interface Roadmap {

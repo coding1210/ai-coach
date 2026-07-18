@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 
+from app.eval.exercises import get_exercise_bank
 from app.llm.router import get_router
 
 log = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ def _horizon(total_gap: int) -> str:
 def build_roadmap(report: dict, cmap) -> dict:
     """Deterministic skeleton: one milestone per top weak spot, priority-ordered."""
     weaknesses = report.get("weaknesses", [])[:_MAX_MILESTONES]
+    bank = get_exercise_bank()
     milestones: list[dict] = []
 
     for rank, w in enumerate(weaknesses, start=1):
@@ -65,6 +67,7 @@ def build_roadmap(report: dict, cmap) -> dict:
         current = w["current_level"]
         target = w["target_level"]
         domain = cmap.domain_of(cid)
+        has_exercise = bank.by_competency(cid) is not None
         anchor_level, anchor_text = _target_anchor(
             cmap.competency(cid).level_anchors, current, target
         )
@@ -74,9 +77,14 @@ def build_roadmap(report: dict, cmap) -> dict:
             + ("your biggest gap right now." if rank == 1 else f"gap #{rank} on your list.")
         )
         focus = anchor_text or f"operating at {_level_name(cmap, target)} level on {name}."
+        first = (
+            f"Take the graded {name} challenge below and iterate until it passes."
+            if has_exercise
+            else f"Build a small artifact that forces {name} — then explain the trade-offs you made."
+        )
         practice = [
-            f"Ask the coach for a graded {name} challenge and iterate until it passes.",
-            f"Build a small artifact that forces {name} — then explain the trade-offs you made.",
+            first,
+            f"Read a strong reference implementation of {name} and note what it does that yours doesn't.",
         ]
         signal = (
             f"You can show {_level_name(cmap, target)} judgement on {name}: {focus}"
@@ -99,6 +107,7 @@ def build_roadmap(report: dict, cmap) -> dict:
                 "why": why,
                 "practice": practice,
                 "signal": signal,
+                "has_exercise": has_exercise,
             }
         )
 
