@@ -49,11 +49,16 @@ for p in 8000 3000; do
 done
 sleep 1
 
-# ── 1. Postgres ──────────────────────────────────────────────────
+# ── 1. Postgres (optional — falls back to in-memory if Docker isn't up) ──
 echo "▸ Postgres"
-docker compose -f "$ROOT/docker-compose.yml" up -d >/dev/null
-until [ "$(docker inspect -f '{{.State.Health.Status}}' aicoach-postgres 2>/dev/null)" = "healthy" ]; do sleep 1; done
-echo "  healthy on :5433"
+if docker info >/dev/null 2>&1 && docker compose -f "$ROOT/docker-compose.yml" up -d >/dev/null 2>&1; then
+  until [ "$(docker inspect -f '{{.State.Health.Status}}' aicoach-postgres 2>/dev/null)" = "healthy" ]; do sleep 1; done
+  echo "  healthy on :5433"
+else
+  echo "  ⚠ Docker not running — starting WITHOUT Postgres (in-memory; data won't persist across restarts)."
+  echo "    To enable persistence: open -a Docker, wait ~30s, then re-run."
+  export DATABASE_URL=""   # forces the backend's in-memory fallback (no failed-connect wait)
+fi
 
 # ── 2. Backend ───────────────────────────────────────────────────
 echo "▸ Backend (:8000)"
