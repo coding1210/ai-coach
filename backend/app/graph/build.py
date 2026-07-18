@@ -19,6 +19,7 @@ from app.graph.edges import (
     route_after_onboard,
     route_after_review,
     route_after_score,
+    route_after_triage,
 )
 from app.graph.state import CoachState
 
@@ -29,6 +30,8 @@ def build_graph(checkpointer):
     g.add_node("onboard", nodes.onboard)
     g.add_node("ask", nodes.ask)
     g.add_node("await_answer", nodes.await_answer)
+    g.add_node("triage", nodes.triage)
+    g.add_node("aside", nodes.aside)
     g.add_node("score", nodes.score)
     g.add_node("level_review", nodes.level_review)
     g.add_node("coach_offer", nodes.coach_offer)
@@ -41,7 +44,9 @@ def build_graph(checkpointer):
     g.add_edge(START, "onboard")
     g.add_conditional_edges("onboard", route_after_onboard, {"ask": "ask", "report": "report"})
     g.add_edge("ask", "await_answer")
-    g.add_edge("await_answer", "score")
+    g.add_edge("await_answer", "triage")
+    g.add_conditional_edges("triage", route_after_triage, {"score": "score", "aside": "aside"})
+    g.add_edge("aside", "await_answer")
     g.add_conditional_edges("score", route_after_score, {"ask": "ask", "review": "level_review", "report": "report"})
     g.add_conditional_edges(
         "level_review",

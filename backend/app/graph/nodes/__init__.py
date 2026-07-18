@@ -10,11 +10,14 @@ from app.graph.nodes.onboard import onboard
 from app.graph.nodes.persist import persist
 from app.graph.nodes.report import report
 from app.graph.nodes.score import score
+from app.graph.nodes.triage import aside, triage
 
 __all__ = [
     "onboard",
     "ask",
     "await_answer",
+    "triage",
+    "aside",
     "score",
     "level_review",
     "coach_offer",

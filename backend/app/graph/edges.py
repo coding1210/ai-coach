@@ -30,6 +30,11 @@ def route_after_onboard(state: CoachState) -> str:
     return "ask"
 
 
+def route_after_triage(state: CoachState) -> str:
+    """Genuine attempts get scored; everything else gets a safe aside + re-ask."""
+    return "score" if state.get("intent", "answer") == "answer" else "aside"
+
+
 def route_after_score(state: CoachState) -> str:
     """Keep asking until the level's batch is done (or we run out), then review."""
     if state.get("stop_requested"):
