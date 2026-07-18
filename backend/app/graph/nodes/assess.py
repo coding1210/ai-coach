@@ -45,22 +45,35 @@ async def ask(state: CoachState) -> dict:
         return {"phase": "review"}
 
     level = state.get("level", 1)
+    beginner = state.get("beginner", False)
     tier = LEVELS[level]
-    probe = tier["probe"].format(name=competency.name)
-    last = _last_answer(state)
 
+    # Level 1 is genuinely foundational — an awareness/understanding check in plain
+    # language, NOT the advanced design scenario from the competency's seed question.
+    if level == 1:
+        if beginner:
+            probe_instr = (
+                f"whether they've come across {competency.name} and what they make of it — in "
+                "plain everyday language, NO jargon, easy to answer even if the honest answer is 'not really'"
+            )
+        else:
+            probe_instr = f"their basic understanding of {competency.name} — a simple foundational question, not a design scenario"
+        ground = ""
+    else:
+        probe_instr = tier["probe"].format(name=competency.name)
+        ground = f' Ground it in this intent (rephrase naturally): "{competency.sample_question}".'
+
+    last = _last_answer(state)
     if last:
         task = (
             f'They just said: "{last}"\n\n'
-            "In ONE short line, reflect back something genuine about that answer, then ask "
-            f"{probe}. Ground it in this intent (rephrase naturally): \"{competency.sample_question}\". "
-            "2-3 sentences total."
+            "In ONE short line, reflect genuinely on that answer. If they didn't know or were "
+            "unsure, reassure them warmly and explain it in ONE plain sentence. Then ask a question "
+            f"probing {probe_instr}.{ground} Keep the whole turn to 2-3 short sentences."
         )
     else:
-        task = (
-            f"You're at Level 1 (Foundations). Open warmly in one short line, then ask {probe}. "
-            f'Ground it in: "{competency.sample_question}". 1-2 sentences.'
-        )
+        opener = "Open warmly in one short line" + (" (keep it beginner-friendly)" if beginner else "")
+        task = f"{opener}, then ask a question probing {probe_instr}.{ground} 1-2 sentences."
 
     messages: list[Message] = [
         {"role": "system", "content": COACH_PERSONA},
