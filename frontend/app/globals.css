@@ -47,6 +47,23 @@ body::before {
   font-variant-numeric: tabular-nums;
 }
 
+/* Right-panel "signal" pulse while the coach is speaking. */
+@keyframes signalPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.07);
+  }
+}
+.signal-speaking {
+  animation: signalPulse 1.1s ease-in-out infinite;
+  transform-origin: center;
+}
+
 /* Accessible focus ring in the accent hue. */
 :focus-visible {
   outline: 2px solid rgba(200, 241, 105, 0.6);

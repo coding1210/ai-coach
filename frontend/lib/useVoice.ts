@@ -23,6 +23,8 @@ export function useVoice() {
   const [listening, setListening] = useState(false);
   const [sttSupported, setSttSupported] = useState(true);
   const [ttsEngine, setTtsEngine] = useState<TtsEngine>("none");
+  const [speaking, setSpeaking] = useState(false);
+  const speakingCount = useRef(0);
 
   useEffect(() => {
     const rec = getRecognition();
@@ -82,21 +84,29 @@ export function useVoice() {
     setListening(false);
   }, []);
 
+  // Speak and track a `speaking` flag (ref-counted so overlapping calls behave).
+  const runSpeak = useCallback(async (text: string) => {
+    speakingCount.current += 1;
+    setSpeaking(true);
+    try {
+      const engine = await speak(text);
+      setTtsEngine(engine);
+    } finally {
+      speakingCount.current -= 1;
+      if (speakingCount.current <= 0) setSpeaking(false);
+    }
+  }, []);
+
   const say = useCallback(
     async (text: string) => {
       if (!enabled) return;
-      const engine = await speak(text);
-      setTtsEngine(engine);
+      await runSpeak(text);
     },
-    [enabled]
+    [enabled, runSpeak]
   );
 
-  // Speak regardless of the enabled flag (used when the user just turned voice
-  // on, to read the message already on screen).
-  const speakNow = useCallback(async (text: string) => {
-    const engine = await speak(text);
-    setTtsEngine(engine);
-  }, []);
+  // Speak regardless of the enabled flag (used when the user just turned voice on).
+  const speakNow = useCallback((text: string) => runSpeak(text), [runSpeak]);
 
   return {
     enabled,
@@ -108,5 +118,6 @@ export function useVoice() {
     say,
     speakNow,
     ttsEngine,
+    speaking,
   };
 }

@@ -32,6 +32,13 @@ export async function ensureSession(): Promise<Session> {
   return s;
 }
 
+// Forget the cached/stored session — used when the backend rejects the token
+// (e.g. it was restarted in-memory and no longer knows this token).
+export function clearSession(): void {
+  _session = null;
+  if (typeof window !== "undefined") localStorage.removeItem("coach_session");
+}
+
 function authHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
