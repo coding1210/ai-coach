@@ -43,13 +43,14 @@ async def test_full_loop_runs_to_done_and_persists():
     # Reached the end of the graph.
     assert result.get("phase") == "done"
 
-    # A structured report was built.
+    # A structured report was built after the leveled assessment.
     report = result.get("report")
-    assert report and report["competencies_assessed"] >= 1
+    assert report and report["competencies_assessed"] >= 3
     assert isinstance(report["priorities"], list)
 
-    # Coverage cleared the threshold (critical+high driven).
-    assert result.get("coverage", 0) >= 0.7
+    # It climbed through the difficulty levels (fake judge clears L1/L2, hits its
+    # ceiling at L3 where the tier expects L4).
+    assert result.get("level", 1) >= 2
 
     # The ledger + report were persisted.
     progress = await repo.get_progress("u1")

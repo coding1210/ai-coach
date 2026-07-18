@@ -48,22 +48,12 @@ async def test_stream_emits_tokens_tool_calls_and_report():
         paused = await _drain(graph, config, Command(resume=_ANSWER), events)
 
     types = [e.get("type") for e in events]
-    # Non-streamed greeting/question.
+    # Non-streamed greeting.
     assert "assistant_message" in types
-    # Streamed report narrative + coaching turns.
-    assert types.count("message_start") >= 2
+    # Streamed, question-by-question turns + the level reviews + report narrative.
+    assert types.count("message_start") >= 3
     assert "token" in types
     assert "message_end" in types
-    # Structured report event.
+    # Structured report event after the leveled assessment.
     report_events = [e for e in events if e.get("type") == "report"]
-    assert report_events and report_events[0]["data"]["competencies_assessed"] >= 1
-    # Agentic tool use during coaching.
-    tool_events = [e for e in events if e.get("type") == "tool_call"]
-    assert tool_events and tool_events[0]["name"] == "research_resource"
-    assert tool_events[0]["result"]["url"].startswith("http")
-
-    # A graded challenge fires for a focus area that has an exercise, and a
-    # behavioral grade comes back with objective checks.
-    assert any(e.get("type") == "exercise" for e in events)
-    grades = [e for e in events if e.get("type") == "grade"]
-    assert grades and isinstance(grades[0]["checks"], list)
+    assert report_events and report_events[0]["data"]["competencies_assessed"] >= 3
