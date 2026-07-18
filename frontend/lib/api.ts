@@ -1,4 +1,4 @@
-import type { LedgerEntry, Report } from "./types";
+import type { Exercise, GradeResult, LedgerEntry, Report } from "./types";
 
 export const HTTP_BASE =
   process.env.NEXT_PUBLIC_HTTP_BASE ?? "http://localhost:8000";
@@ -52,5 +52,25 @@ export async function fetchProgress(token: string): Promise<LedgerEntry[]> {
 export async function fetchReport(token: string): Promise<Report | null> {
   const r = await fetch(`${HTTP_BASE}/report`, { headers: authHeaders(token) });
   if (!r.ok) return null;
+  return r.json();
+}
+
+export async function fetchExercise(competencyId: string): Promise<Exercise> {
+  const r = await fetch(`${HTTP_BASE}/exercise/${competencyId}`);
+  if (!r.ok) throw new Error("No challenge available for this competency.");
+  return r.json();
+}
+
+export async function gradeSubmission(
+  competencyId: string,
+  submission: string
+): Promise<GradeResult> {
+  const { token } = await ensureSession();
+  const r = await fetch(`${HTTP_BASE}/grade`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ competency_id: competencyId, submission }),
+  });
+  if (!r.ok) throw new Error("Grading failed. Is the backend running?");
   return r.json();
 }
