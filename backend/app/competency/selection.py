@@ -85,6 +85,17 @@ def reassess_targets(cmap: CompetencyMap, prior_levels: dict[str, int]) -> list[
     return [cid for cid, _ in scored]
 
 
+def target_for(cmap: CompetencyMap, competency_id: str, jd_targets: dict | None = None) -> int:
+    """Target level for a competency: from the job description if provided (per its
+    domain), otherwise the generic weight-derived target."""
+    domain = cmap.domain_of(competency_id)
+    if jd_targets:
+        lvl = jd_targets.get(domain.id)
+        if lvl:  # 0/None = not emphasized by the role → fall back
+            return max(1, min(5, int(lvl)))
+    return target_level_for(domain.weight)
+
+
 def target_level_for(weight: str) -> int:
     """Derive a target proficiency from domain weight (Syllabus.md §1).
 

@@ -74,6 +74,11 @@ export default function ReportPanel({
         <h2 className="mt-1 text-lg font-semibold tracking-[-0.01em] text-hi">
           Where you stand
         </h2>
+        {report.role_title && (
+          <p className="mt-1 text-xs text-accent">
+            Targets set for: {report.role_title}
+          </p>
+        )}
         <p className="nums mt-1 text-xs text-dim">
           {report.competencies_assessed} competencies assessed · current
           <span className="mx-1 inline-block h-2 w-2 translate-y-[1px] rounded-full bg-accent" />
