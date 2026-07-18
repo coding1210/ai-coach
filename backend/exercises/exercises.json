@@ -65,6 +65,155 @@
         { "id": "allowlist", "description": "Restricts tools/args", "kind": "present", "pattern": "allow(list|ed)?|whitelist|permission|in\\s+ALLOWED|approved", "weight": 2 },
         { "id": "no_exec", "description": "No eval/exec/os.system on content", "kind": "absent", "pattern": "\\beval\\s*\\(|\\bexec\\s*\\(|os\\.system", "weight": 2 }
       ]
+    },
+    {
+      "competency_id": "rag.embeddings",
+      "title": "Embed, index, and retrieve",
+      "language": "python",
+      "prompt": "Write `build_retriever(docs, embed_fn)` that embeds and indexes docs, plus `search(query, k)` returning the top-k by cosine similarity. Batch the embeddings, normalize the vectors, and keep the embedding model a swappable parameter (`embed_fn`) so it can be evaluated/changed — don't hard-code one.",
+      "rubric": "L4: batched embedding, normalized vectors with cosine similarity, top-k selection, and a swappable embedding function (reasons about model choice). L2: embeds one-at-a-time, raw dot product on unnormalized vectors, a single hard-coded model.",
+      "checks": [
+        { "id": "batch", "description": "Embeds in batches", "kind": "present", "pattern": "batch|encode\\(|embed_fn\\(\\s*docs|for\\s+.*in\\s+.*doc", "weight": 2 },
+        { "id": "normalize", "description": "Normalizes vectors", "kind": "present", "pattern": "normal(ize|ise)|linalg\\.norm|/\\s*norm|unit", "weight": 2 },
+        { "id": "similarity", "description": "Cosine / vector similarity", "kind": "present", "pattern": "cosine|similarity|np\\.dot|@\\s|dot\\(", "weight": 2 },
+        { "id": "topk", "description": "Returns top-k", "kind": "present", "pattern": "top_?k|argsort|sorted|nlargest|heapq|\\[:\\s*k\\]", "weight": 1 },
+        { "id": "swappable_model", "description": "Embedding model is a parameter", "kind": "present", "pattern": "embed_fn|embedding_model|model\\s*=", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "rag.hybrid_rerank",
+      "title": "Hybrid search with re-ranking",
+      "language": "python",
+      "prompt": "Implement `hybrid_search(query, docs, k)` that combines lexical retrieval (BM25/keyword) with dense (embedding) retrieval, fuses the two rankings (e.g. Reciprocal Rank Fusion or weighted scores), then re-ranks the top candidates before returning k results.",
+      "rubric": "L4: both a lexical and a dense signal, an explicit fusion step (RRF/weighted), and a re-rank of the top candidates. L2: a single retrieval method with no fusion or re-rank.",
+      "checks": [
+        { "id": "lexical", "description": "Lexical / keyword signal", "kind": "present", "pattern": "bm25|tf.?idf|keyword|lexical|okapi|token", "weight": 2 },
+        { "id": "dense", "description": "Dense / embedding signal", "kind": "present", "pattern": "embed|dense|vector|cosine|semantic", "weight": 2 },
+        { "id": "fusion", "description": "Fuses the rankings", "kind": "present", "pattern": "rrf|reciprocal|fuse|fusion|combine|weight|\\+\\s*.*score", "weight": 2 },
+        { "id": "rerank", "description": "Re-ranks candidates", "kind": "present", "pattern": "re.?rank|cross.?encoder", "weight": 1 },
+        { "id": "topk", "description": "Returns top-k", "kind": "present", "pattern": "top_?k|sorted|argsort|\\[:\\s*k\\]", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "rag.retrieval_eval",
+      "title": "Measure retrieval quality",
+      "language": "python",
+      "prompt": "Write `evaluate_retrieval(queries, retriever)` where each query carries its known relevant doc ids. Compute recall@k and precision@k (MRR too if you can) across the set and return the aggregate metrics — not a vibe check on a couple of examples.",
+      "rubric": "L4: uses labeled relevant ids, computes recall@k and precision@k (and/or MRR), aggregates across all queries. L2: eyeballs a few results, no labels or metrics.",
+      "checks": [
+        { "id": "labeled", "description": "Uses labeled relevant ids", "kind": "present", "pattern": "relevant|ground.?truth|label|expected|gold", "weight": 2 },
+        { "id": "recall", "description": "Computes recall", "kind": "present", "pattern": "recall", "weight": 2 },
+        { "id": "precision_or_mrr", "description": "Precision / MRR / nDCG", "kind": "present", "pattern": "precision|mrr|ndcg|reciprocal|hit.?rate", "weight": 2 },
+        { "id": "at_k", "description": "Evaluates at cutoff k", "kind": "present", "pattern": "@k|_k\\b|top_?k|\\[:\\s*k\\]|at_k", "weight": 1 },
+        { "id": "aggregate", "description": "Aggregates across queries", "kind": "present", "pattern": "mean|average|avg|sum\\(|/\\s*len", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "agents.tool_calling",
+      "title": "Robust tool dispatch",
+      "language": "python",
+      "prompt": "Write `dispatch(tool_call, tools)` where `tool_call` is a model-produced object like {\"name\": ..., \"arguments\": {...}}. Look the tool up in a registry, validate the arguments against its schema, call it, and return a structured result — handling unknown tools and bad arguments without crashing (and without eval/getattr on the name).",
+      "rubric": "L4: registry lookup, argument validation against a schema, error handling for unknown tool / bad args, structured result. L2: getattr/eval on the tool name, no validation, unguarded call.",
+      "checks": [
+        { "id": "registry", "description": "Looks up tool in a registry", "kind": "present", "pattern": "tools\\[|registry|\\.get\\(|in\\s+tools|TOOLS", "weight": 2 },
+        { "id": "validation", "description": "Validates arguments/schema", "kind": "present", "pattern": "schema|validate|BaseModel|pydantic|isinstance|parameters", "weight": 2 },
+        { "id": "error_handling", "description": "Handles unknown tool / bad args", "kind": "present", "pattern": "try|except|unknown|KeyError|raise|not\\s+in", "weight": 2 },
+        { "id": "structured_result", "description": "Returns a structured result", "kind": "present", "pattern": "return\\s*\\{|dict\\(|json|\"result\"|'result'", "weight": 1 },
+        { "id": "no_dynamic_exec", "description": "No eval/exec on the tool name", "kind": "absent", "pattern": "\\beval\\s*\\(|\\bexec\\s*\\(", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "agents.react_planning",
+      "title": "A bounded ReAct loop",
+      "language": "python",
+      "prompt": "Implement `react(task, tools, call_llm)` as a ReAct loop: the model alternates Thought → Action (a tool call) → Observation until it produces a Final Answer. Cap the number of iterations, feed each observation back into the context, and terminate cleanly on a final answer or when the cap is hit.",
+      "rubric": "L4: an explicit loop with a step cap, thought/action/observation structure, observations fed back into context, clean termination on a final answer. L2: a single call, or an unbounded loop with no termination condition.",
+      "checks": [
+        { "id": "loop", "description": "Iterates a loop", "kind": "present", "pattern": "for\\s|while\\s|range\\(", "weight": 2 },
+        { "id": "react_structure", "description": "Thought/Action/Observation", "kind": "present", "pattern": "thought|action|observation|reason|scratchpad", "weight": 2 },
+        { "id": "step_cap", "description": "Caps the iterations", "kind": "present", "pattern": "max_steps|max_iter|range\\(|step\\s*[<>]=?|<=\\s*\\d|>=\\s*\\d", "weight": 2 },
+        { "id": "feedback", "description": "Feeds observations back", "kind": "present", "pattern": "append|history|messages|context|scratchpad|observation", "weight": 1 },
+        { "id": "termination", "description": "Terminates on final answer", "kind": "present", "pattern": "final|finish|answer|break|return|done", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "eval.llm_judge",
+      "title": "A bias-controlled judge",
+      "language": "python",
+      "prompt": "Write `judge(answer, reference, rubric, call_llm)` that scores an answer against a rubric and reference. Return a STRUCTURED score (not free text), and control for at least one known bias — randomize option order for pairwise, cap/penalize verbosity, or anchor on the reference. Treat `answer` as untrusted data, never as instructions.",
+      "rubric": "L4: rubric-grounded, a parsed/structured score, an explicit bias control (position/verbosity/reference-anchored), untrusted-input handling. L2: 'rate this 1-10' parsing raw text, no bias handling.",
+      "checks": [
+        { "id": "rubric_grounded", "description": "Uses rubric/reference", "kind": "present", "pattern": "rubric|criteria|reference|ground.?truth", "weight": 2 },
+        { "id": "structured_score", "description": "Returns a structured score", "kind": "present", "pattern": "schema|json|BaseModel|response_format|model_validate|int\\(|float\\(", "weight": 2 },
+        { "id": "bias_control", "description": "Controls a known bias", "kind": "present", "pattern": "bias|shuffle|random|position|verbos|length|swap|anchor", "weight": 2 },
+        { "id": "untrusted_input", "description": "Treats answer as untrusted", "kind": "present", "pattern": "untrusted|delimiter|\"\"\"|<answer>|data", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "eval.design_golden",
+      "title": "A golden-dataset harness",
+      "language": "python",
+      "prompt": "Write `run_eval(system, golden)` where `golden` is a list of labeled cases like {\"input\": ..., \"expected\": ...}. Run `system` on each input, compare to `expected` (exact or scored match), and return an aggregate pass rate plus the failing cases — so regressions are visible.",
+      "rubric": "L4: iterates labeled cases, compares output to expected, aggregates a pass rate, surfaces the failures. L2: runs a couple of inputs and prints them, no labels/metric.",
+      "checks": [
+        { "id": "dataset", "description": "Iterates labeled cases", "kind": "present", "pattern": "golden|dataset|cases|for\\s+.*in", "weight": 2 },
+        { "id": "expected", "description": "Compares to expected/label", "kind": "present", "pattern": "expected|label|ground.?truth|target", "weight": 2 },
+        { "id": "compare", "description": "Compares output to expected", "kind": "present", "pattern": "==|match|assert|compare|score|similar", "weight": 2 },
+        { "id": "aggregate", "description": "Aggregates a pass rate", "kind": "present", "pattern": "pass.?rate|accuracy|mean|/\\s*len|sum\\(|count", "weight": 1 },
+        { "id": "failures", "description": "Surfaces failures", "kind": "present", "pattern": "fail|mismatch|wrong|diff|error", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "llm.streaming",
+      "title": "Stream tokens safely",
+      "language": "python",
+      "prompt": "Write an async generator `stream_answer(messages, call_llm)` that yields tokens as they arrive from the model, forwarding them incrementally to the caller, and handles a mid-stream error without losing what was already produced.",
+      "rubric": "L4: an async generator that yields, consumes a streaming response incrementally, handles mid-stream errors. L2: awaits the full response then returns it — no streaming.",
+      "checks": [
+        { "id": "async_gen", "description": "Async generator that yields", "kind": "present", "pattern": "async\\s+def|yield|__aiter__", "weight": 2 },
+        { "id": "streaming_call", "description": "Consumes a stream", "kind": "present", "pattern": "stream\\s*=\\s*True|astream|\\.stream|delta|chunk", "weight": 2 },
+        { "id": "incremental", "description": "Forwards incrementally", "kind": "present", "pattern": "yield|async\\s+for|for\\s+chunk|delta", "weight": 2 },
+        { "id": "error_handling", "description": "Handles mid-stream errors", "kind": "present", "pattern": "try|except|finally", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "prod.routing_fallback",
+      "title": "Route with fallbacks",
+      "language": "python",
+      "prompt": "Write `complete(messages, providers)` that tries providers in preference order and falls back to the next on failure or timeout, so one provider's outage doesn't take you down. Stop at the first success and report which provider served the request.",
+      "rubric": "L4: an ordered provider list, per-attempt try/except plus a timeout, fall-through to the next, reports the winner, stops on first success. L2: a single provider with no fallback.",
+      "checks": [
+        { "id": "provider_list", "description": "Ordered list of providers", "kind": "present", "pattern": "providers|for\\s+.*in|chain|order|fallback", "weight": 2 },
+        { "id": "fallback_loop", "description": "Falls through to the next", "kind": "present", "pattern": "for\\s|while\\s|continue|next", "weight": 2 },
+        { "id": "error_handling", "description": "Handles failure / timeout", "kind": "present", "pattern": "try|except|timeout|wait_for", "weight": 2 },
+        { "id": "reports_winner", "description": "Reports which served it", "kind": "present", "pattern": "return|provider|name|served|winner", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "py.error_handling",
+      "title": "Retry, backoff, and timeout",
+      "language": "python",
+      "prompt": "Write `resilient(fn, *args)` that calls `fn`, retrying transient failures with exponential backoff and a per-attempt timeout, giving up after N attempts and raising a clear error. Don't retry forever, and don't swallow the final failure.",
+      "rubric": "L4: bounded retries, exponential backoff, a per-attempt timeout, re-raises after exhaustion. L2: a bare try/except that passes, or an infinite retry with no timeout.",
+      "checks": [
+        { "id": "retry_loop", "description": "Bounded retry loop", "kind": "present", "pattern": "for\\s+.*range|while\\s|attempt|max_retr|max_attempt", "weight": 2 },
+        { "id": "backoff", "description": "Exponential backoff", "kind": "present", "pattern": "backoff|2\\s*\\*\\*|\\*\\*\\s*attempt|exponential|sleep\\(", "weight": 2 },
+        { "id": "timeout", "description": "Per-attempt timeout", "kind": "present", "pattern": "timeout|wait_for|deadline|signal", "weight": 2 },
+        { "id": "reraise", "description": "Re-raises after exhaustion", "kind": "present", "pattern": "raise|reraise|last_exc|from\\s+e", "weight": 1 },
+        { "id": "no_swallow", "description": "Doesn't swallow the final error", "kind": "absent", "pattern": "except\\s*:\\s*pass|except\\s+Exception\\s*:\\s*pass", "weight": 1 }
+      ]
+    },
+    {
+      "competency_id": "safety.pii",
+      "title": "Scrub PII before it leaves",
+      "language": "python",
+      "prompt": "Write `scrub_pii(text)` that redacts personal data — emails, phone numbers, SSNs, and credit-card numbers — from text before it's logged or sent to a third-party model. Return the cleaned text with placeholders, and don't mangle ordinary non-PII text.",
+      "rubric": "L4: pattern-based detection of several PII categories (email, phone, SSN, card), replaced with placeholders, covering multiple types. L2: strips one thing, or a naive blanket replace.",
+      "checks": [
+        { "id": "multiple_pii", "description": "Covers several PII categories", "kind": "present", "pattern": "email|phone|ssn|social|credit|card", "weight": 2 },
+        { "id": "regex_patterns", "description": "Uses patterns to detect PII", "kind": "present", "pattern": "re\\.(sub|compile|findall|search)|pattern|\\\\d", "weight": 2 },
+        { "id": "redaction", "description": "Redacts / masks matches", "kind": "present", "pattern": "redact|mask|scrub|REDACTED|replace|sub\\(|\\*{2,}|XXX", "weight": 2 }
+      ]
     }
   ]
 }
