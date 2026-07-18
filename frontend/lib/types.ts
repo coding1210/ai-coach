@@ -49,6 +49,27 @@ export interface RadarDomain {
   target: number;
 }
 
+export interface RoadmapMilestone {
+  rank: number;
+  competency_id: string;
+  competency_name: string;
+  domain_name: string;
+  domain_weight: string;
+  from_level: number;
+  from_level_name: string;
+  target_level: number;
+  target_level_name: string;
+  focus: string;
+  why: string;
+  practice: string[];
+  signal: string;
+}
+
+export interface Roadmap {
+  horizon: string;
+  milestones: RoadmapMilestone[];
+}
+
 export interface Report {
   strengths: CompetencyEntry[];
   weaknesses: CompetencyEntry[];
@@ -58,6 +79,7 @@ export interface Report {
   role_title?: string; // set when targets came from a pasted JD
   verdict?: string; // hiring read, set in interview mode
   interview?: boolean; // true when produced by a mock-interview session
+  roadmap?: Roadmap; // personalized growth plan (coaching mode)
 }
 
 export interface LedgerEntry {

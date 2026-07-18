@@ -10,8 +10,10 @@ generated on top (GPT via the `report` task) — the numbers never depend on it.
 
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
 
+from app.coaching.roadmap import build_roadmap, enrich_roadmap
 from app.competency.loader import get_competency_map
 from app.competency.selection import target_for
 from app.graph.state import CoachState
@@ -158,8 +160,14 @@ async def report(state: CoachState) -> dict:
 
     built = build_report(merged, cmap, prior_levels=prior, jd_targets=state.get("jd_targets") or {})
     built["role_title"] = state.get("role_title", "")
-    narrative = await _narrative(
-        built, state.get("profile") or {}, reassess, state.get("level", 1), state.get("beginner", False)
+    built["roadmap"] = build_roadmap(built, cmap)
+
+    profile = state.get("profile") or {}
+    # Enrich the roadmap and stream the spoken summary concurrently — the roadmap
+    # is mutated in place, so it's fully enriched by the time we emit the report.
+    _, narrative = await asyncio.gather(
+        enrich_roadmap(built["roadmap"], profile, built.get("role_title", "")),
+        _narrative(built, profile, reassess, state.get("level", 1), state.get("beginner", False)),
     )
     emit({"type": "report", "data": built})
     return {
