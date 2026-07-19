@@ -168,6 +168,7 @@ async def report(state: CoachState) -> dict:
     built = build_report(merged, cmap, prior_levels=prior, jd_targets=state.get("jd_targets") or {})
     built["role_title"] = state.get("role_title", "")
     built["early_stage"] = built.get("early_stage") or bool(state.get("beginner"))
+    built["first_session"] = not reassess  # a returning user is routed into reassess
     built["benchmark"] = benchmark_report(built["radar"])
     early = built["early_stage"]
     built["roadmap"] = build_roadmap(built, cmap, beginner=early)

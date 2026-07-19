@@ -6,6 +6,7 @@ import Chat from "@/components/Chat";
 import DueNudge from "@/components/DueNudge";
 import Onboarding from "@/components/Onboarding";
 import ReportPanel from "@/components/ReportPanel";
+import RestoreProgress from "@/components/RestoreProgress";
 import { diagnoseCode } from "@/lib/api";
 import type { Profile, Report } from "@/lib/types";
 import { useCoachSession } from "@/lib/useCoachSession";
@@ -90,15 +91,23 @@ export default function Home() {
             gaps, and coaches you forward.
           </p>
         </div>
-        <Link
-          href="/progress"
-          className="group hidden shrink-0 items-center gap-2 rounded-md border border-edge px-3.5 py-2 text-xs font-medium text-mid transition-[transform,border-color,color] duration-200 ease-out-quart hover:border-edge-strong hover:text-hi active:scale-[0.98] sm:flex"
-        >
-          Progress
-          <span className="text-accent transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
-            →
-          </span>
-        </Link>
+        <div className="hidden shrink-0 items-center gap-2 sm:flex">
+          <Link
+            href="/map"
+            className="group flex items-center gap-2 rounded-md border border-edge px-3.5 py-2 text-xs font-medium text-mid transition-[transform,border-color,color] duration-200 ease-out-quart hover:border-edge-strong hover:text-hi active:scale-[0.98]"
+          >
+            The field
+          </Link>
+          <Link
+            href="/progress"
+            className="group flex items-center gap-2 rounded-md border border-edge px-3.5 py-2 text-xs font-medium text-mid transition-[transform,border-color,color] duration-200 ease-out-quart hover:border-edge-strong hover:text-hi active:scale-[0.98]"
+          >
+            Progress
+            <span className="text-accent transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
+              →
+            </span>
+          </Link>
+        </div>
       </header>
 
       {error && (
@@ -136,6 +145,7 @@ export default function Home() {
         <div className="mx-auto max-w-lg space-y-4">
           <DueNudge onRecheck={() => start({ goal: "re-check my gaps", background: "returning learner", target_role: "" }, "coach")} />
           <Onboarding onStart={start} onDiagnoseCode={handleDiagnose} diagnosing={diagnosing} />
+          <RestoreProgress />
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1.15fr_1fr]">

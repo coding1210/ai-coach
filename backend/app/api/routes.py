@@ -134,6 +134,42 @@ async def list_role_presets() -> dict:
     return {"roles": list_roles()}
 
 
+@router.get("/account")
+async def get_account(request: Request, user_id: str = Depends(current_user)) -> dict:
+    """What this session's recovery code unlocks — powers 'save / restore progress'.
+    The bearer token IS the recovery code (no email infra); this validates it and
+    reports whether there's saved work to come back to."""
+    repo = request.app.state.repo
+    report = await repo.get_latest_report(user_id)
+    progress = await repo.get_progress(user_id)
+    return {
+        "user_id": user_id,
+        "has_report": report is not None,
+        "competencies_tracked": len(progress),
+        "latest_thread": await repo.latest_thread(user_id),
+    }
+
+
+@router.get("/map")
+async def field_map() -> dict:
+    """The territory: every domain with its competencies — a one-glance map of
+    Gen AI engineering for a newcomer to orient against."""
+    from app.competency.loader import get_competency_map
+
+    cmap = get_competency_map()
+    return {
+        "domains": [
+            {
+                "id": d.id,
+                "name": d.name,
+                "weight": d.weight,
+                "competencies": [{"id": c.id, "name": c.name} for c in d.competencies],
+            }
+            for d in cmap.domains
+        ]
+    }
+
+
 @router.get("/due")
 async def get_due(request: Request, user_id: str = Depends(current_user)) -> dict:
     """Competencies due for a spaced re-check, most-overdue first."""

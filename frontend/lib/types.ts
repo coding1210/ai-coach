@@ -139,6 +139,28 @@ export interface Report {
   benchmark?: BenchmarkDomain[]; // where you stand vs a typical engineer
   source?: string; // "code" when diagnosed from real artifacts
   early_stage?: boolean; // true when the user is at the start — report is reframed
+  first_session?: boolean; // true on the very first diagnosis (not a re-assessment)
+  growth?: Growth; // measured movement since last time (re-assessment)
+}
+
+export interface Growth {
+  improved_count: number;
+  total_delta: number;
+  improved: { competency_name: string; from: number; to: number }[];
+}
+
+export interface FieldDomain {
+  id: string;
+  name: string;
+  weight: string;
+  competencies: { id: string; name: string }[];
+}
+
+export interface Account {
+  user_id: string;
+  has_report: boolean;
+  competencies_tracked: number;
+  latest_thread: string | null;
 }
 
 export interface LedgerEntry {
