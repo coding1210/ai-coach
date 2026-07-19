@@ -137,6 +137,7 @@ export interface Report {
   roadmap?: Roadmap; // personalized growth plan (coaching mode)
   benchmark?: BenchmarkDomain[]; // where you stand vs a typical engineer
   source?: string; // "code" when diagnosed from real artifacts
+  early_stage?: boolean; // true when the user is at the start — report is reframed
 }
 
 export interface LedgerEntry {

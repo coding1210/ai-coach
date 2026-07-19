@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createShare } from "@/lib/api";
+import { glossForCompetency, glossForDomain } from "@/lib/glossary";
 import type { CompetencyEntry, Report, RoadmapMilestone } from "@/lib/types";
 import ChallengePanel from "./ChallengePanel";
 import RadarChart from "./RadarChart";
@@ -68,6 +69,7 @@ function LevelBar({ current, target }: { current: number; target: number }) {
 }
 
 function CompetencyRow({ c, showGap }: { c: CompetencyEntry; showGap?: boolean }) {
+  const gloss = glossForCompetency(c.competency_id);
   return (
     <li className="rounded-md border border-edge/60 bg-raised px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
@@ -80,6 +82,7 @@ function CompetencyRow({ c, showGap }: { c: CompetencyEntry; showGap?: boolean }
           )}
         </span>
       </div>
+      {gloss && <p className="mt-0.5 text-[11px] leading-snug text-faint">{gloss}</p>}
       <LevelBar current={c.current_level} target={c.target_level} />
       {c.evidence && (
         <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-dim">
@@ -109,6 +112,7 @@ function VerdictBadge({ verdict }: { verdict: string }) {
 
 function MilestoneCard({ m }: { m: RoadmapMilestone }) {
   const [achieved, setAchieved] = useState<number | null>(null);
+  const gloss = glossForCompetency(m.competency_id);
   return (
     <li className="rounded-md border border-edge/60 bg-raised px-3 py-3">
       <div className="flex items-start gap-2.5">
@@ -133,7 +137,8 @@ function MilestoneCard({ m }: { m: RoadmapMilestone }) {
               )}
             </span>
           </div>
-          <p className="mt-0.5 text-[11px] text-faint">{m.why}</p>
+          {gloss && <p className="mt-0.5 text-[11px] leading-snug text-faint">{gloss}</p>}
+          <p className="mt-1.5 text-[11px] text-faint">{m.why}</p>
 
           <p className="mt-2 text-xs leading-relaxed text-dim">
             <span className="text-mid">What good looks like: </span>
@@ -189,7 +194,12 @@ function BenchmarkBar({ b }: { b: import("@/lib/types").BenchmarkDomain }) {
   return (
     <li className="rounded-md border border-edge/60 bg-raised px-3 py-2">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-hi">{b.domain_name}</span>
+        <span
+          className="text-sm font-medium text-hi"
+          title={glossForDomain(b.domain_id) || undefined}
+        >
+          {b.domain_name}
+        </span>
         <span className={`font-mono text-[11px] ${tone}`}>{b.standing}</span>
       </div>
       <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-edge">
@@ -232,6 +242,9 @@ export default function ReportPanel({
     : report.source === "code"
       ? "Diagnosed from your code"
       : "Evaluation";
+  // Reframe for someone at the very start: encouragement over percentiles.
+  const early = !!report.early_stage && !report.interview;
+  const firstStep = report.roadmap?.milestones?.[0]?.competency_name;
   return (
     <div className="space-y-7">
       <div>
@@ -263,11 +276,31 @@ export default function ReportPanel({
         </p>
       </div>
 
+      {early && (
+        <div className="rounded-xl border border-accent/40 bg-accent/[0.06] p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent">
+            You&apos;re at the start — right where you should be
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-mid">
+            Everyone starts here. You don&apos;t need to know everything — just the
+            next thing.
+            {firstStep && (
+              <>
+                {" "}
+                Begin with <span className="font-medium text-hi">{firstStep}</span>;
+                your growth path below breaks it into small, doable steps.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
       <div className="flex justify-center rounded-xl border border-edge/60 bg-ink/40 p-4">
         <RadarChart radar={report.radar} />
       </div>
 
-      {report.benchmark && report.benchmark.length > 0 && (
+      {/* Peer benchmark can demotivate a beginner — hidden until they're past the start. */}
+      {!early && report.benchmark && report.benchmark.length > 0 && (
         <section>
           <SectionLabel tone="accent">Benchmark · vs a typical Gen AI engineer</SectionLabel>
           <ul className="space-y-2">
@@ -280,10 +313,12 @@ export default function ReportPanel({
 
       {report.weaknesses.length > 0 && (
         <section>
-          <SectionLabel tone="warn">Focus areas · gap × weight</SectionLabel>
+          <SectionLabel tone="warn">
+            {early ? "Where to start" : "Focus areas · gap × weight"}
+          </SectionLabel>
           <ul className="space-y-2">
             {report.weaknesses.slice(0, 5).map((c) => (
-              <CompetencyRow key={c.competency_id} c={c} showGap />
+              <CompetencyRow key={c.competency_id} c={c} showGap={!early} />
             ))}
           </ul>
         </section>

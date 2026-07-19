@@ -6,7 +6,7 @@ import type { Profile, RolePreset } from "@/lib/types";
 
 const PRESETS: { label: string; profile: Profile }[] = [
   {
-    label: "Leveling-up Lena",
+    label: "Leveling-up Layla",
     profile: {
       goal: "become a job-ready Gen AI engineer",
       background: "1–3 yrs Python, some LangChain/RAG from tutorials",
@@ -14,7 +14,7 @@ const PRESETS: { label: string; profile: Profile }[] = [
     },
   },
   {
-    label: "Pivoting Pavan",
+    label: "Pivoting Omar",
     profile: {
       goal: "move into a senior Gen AI role",
       background: "experienced backend dev, strong Python, new to LLMs/agents",
@@ -74,6 +74,7 @@ export default function Onboarding({
   const [roles, setRoles] = useState<RolePreset[]>([]);
   const [code, setCode] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     fetchRoles().then(setRoles).catch(() => {});
@@ -109,6 +110,27 @@ export default function Onboarding({
   return (
     <div className="mx-auto max-w-lg animate-rise-in rounded-2xl border border-edge/70 bg-white/[0.015] p-1.5 shadow-panel">
       <div className="rounded-[13px] border border-edge/60 bg-panel p-6 sm:p-7">
+        {/* How it works — a calm 20-second orientation before any input. */}
+        <div className="mb-6 rounded-lg border border-edge/60 bg-black/20 p-4">
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent">
+            How this works
+          </span>
+          <ol className="mt-2 space-y-1 text-xs leading-relaxed text-mid">
+            <li>
+              <span className="text-faint">1 · </span>Answer a few questions — there
+              are no wrong answers.
+            </li>
+            <li>
+              <span className="text-faint">2 · </span>See where you actually stand
+              today.
+            </li>
+            <li>
+              <span className="text-faint">3 · </span>Get a plan built around your
+              own gaps.
+            </li>
+          </ol>
+        </div>
+
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
           {h.tag}
         </span>
@@ -117,47 +139,8 @@ export default function Onboarding({
         </h2>
         <p className="mt-1.5 text-sm leading-relaxed text-dim text-pretty">{h.blurb}</p>
 
-        <div className="mt-5 grid grid-cols-3 gap-1 rounded-lg border border-edge/70 bg-black/20 p-1">
-          {(
-            [
-              ["coach", "Coaching"],
-              ["interview", "Interview"],
-              ["code", "From code"],
-            ] as const
-          ).map(([m, label]) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`rounded-md px-3 py-2 text-xs font-medium transition-[background,color] duration-200 ease-out-quart ${
-                mode === m ? "bg-accent text-accent-ink" : "text-mid hover:text-hi"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {roles.length > 0 && (
-          <div className="mt-4">
-            <Field label="Target role (sets the bar)">
-              <select
-                className="coach-input"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                <option value="">Generic senior bar</option>
-                {roles.map((r) => (
-                  <option key={r.key} value={r.key}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-        )}
-
         {mode === "code" ? (
-          <div className="mt-4 space-y-4">
+          <div className="mt-5 space-y-4">
             <Field label="Public GitHub repo URL (optional)">
               <input
                 className="coach-input"
@@ -177,50 +160,24 @@ export default function Onboarding({
             </Field>
           </div>
         ) : (
-          <>
-            <div className="mt-4 space-y-4">
-              <Field label="Your goal">
-                <input
-                  className="coach-input"
-                  value={profile.goal}
-                  onChange={set("goal")}
-                  placeholder="e.g. become a senior Gen AI engineer"
-                />
-              </Field>
-              <Field label="Your background">
-                <input
-                  className="coach-input"
-                  value={profile.background}
-                  onChange={set("background")}
-                  placeholder="e.g. backend dev, strong Python, new to agents"
-                />
-              </Field>
-              <Field label="Target job description (optional)">
-                <textarea
-                  className="coach-input"
-                  rows={3}
-                  value={profile.jd ?? ""}
-                  onChange={(e) => setProfile((p) => ({ ...p, jd: e.target.value }))}
-                  placeholder="Paste a JD and the coach measures your gaps against that exact role."
-                />
-              </Field>
-            </div>
-
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
-                or load a persona
-              </span>
-              {PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  onClick={() => setProfile(p.profile)}
-                  className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-mid transition-[transform,border-color,color] duration-200 ease-out-quart hover:border-accent/60 hover:text-hi active:scale-[0.97]"
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </>
+          <div className="mt-5 space-y-4">
+            <Field label="Your goal">
+              <input
+                className="coach-input"
+                value={profile.goal}
+                onChange={set("goal")}
+                placeholder="e.g. become a Gen AI engineer"
+              />
+            </Field>
+            <Field label="Your background">
+              <input
+                className="coach-input"
+                value={profile.background}
+                onChange={set("background")}
+                placeholder="e.g. some Python, new to LLMs — or just starting out"
+              />
+            </Field>
+          </div>
         )}
 
         <button
@@ -239,6 +196,89 @@ export default function Onboarding({
             →
           </span>
         </button>
+
+        {/* Advanced — hidden by default so a newcomer sees one obvious path. */}
+        <button
+          onClick={() => setShowAdvanced((v) => !v)}
+          className="mt-4 flex w-full items-center justify-center gap-1.5 text-xs text-dim transition-colors hover:text-hi"
+        >
+          {showAdvanced ? "Fewer options" : "More options"}
+          <span className="text-faint">{showAdvanced ? "▲" : "▾"}</span>
+        </button>
+
+        {showAdvanced && (
+          <div className="mt-4 space-y-4 border-t border-edge/50 pt-4">
+            <div>
+              <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.16em] text-dim">
+                Session type
+              </span>
+              <div className="grid grid-cols-3 gap-1 rounded-lg border border-edge/70 bg-black/20 p-1">
+                {(
+                  [
+                    ["coach", "Coaching"],
+                    ["interview", "Interview"],
+                    ["code", "From code"],
+                  ] as const
+                ).map(([m, label]) => (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    className={`rounded-md px-3 py-2 text-xs font-medium transition-[background,color] duration-200 ease-out-quart ${
+                      mode === m ? "bg-accent text-accent-ink" : "text-mid hover:text-hi"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {roles.length > 0 && (
+              <Field label="Target role (sets the bar)">
+                <select
+                  className="coach-input"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                >
+                  <option value="">Generic senior bar</option>
+                  {roles.map((r) => (
+                    <option key={r.key} value={r.key}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+
+            {mode !== "code" && (
+              <>
+                <Field label="Target job description (optional)">
+                  <textarea
+                    className="coach-input"
+                    rows={3}
+                    value={profile.jd ?? ""}
+                    onChange={(e) => setProfile((p) => ({ ...p, jd: e.target.value }))}
+                    placeholder="Paste a JD and the coach measures your gaps against that exact role."
+                  />
+                </Field>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+                    or load a persona
+                  </span>
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p.label}
+                      onClick={() => setProfile(p.profile)}
+                      className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-mid transition-[transform,border-color,color] duration-200 ease-out-quart hover:border-accent/60 hover:text-hi active:scale-[0.97]"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <style jsx>{`
