@@ -114,7 +114,15 @@ def _rep_id(competency_id: str, rep_type: str, level: int, prompt: str) -> str:
 def _templated_rep(comp: Competency, rep_type: RepType, target_level: int) -> Rep:
     name = comp.name
     good = _target_anchor(comp, target_level) or f"proficient judgement on {name}"
-    if rep_type == "explain":
+    if rep_type == "project":
+        prompt = (
+            f"Build a small but real artifact that genuinely exercises {name}, then paste the code. "
+            f"It should stand on its own and clearly demonstrate {name} the way you would in a "
+            f"production system — not a toy stub. Aim for what good looks like: {good[:120]}"
+        )
+        audience = None
+        artifact = None
+    elif rep_type == "explain":
         prompt = (
             f"Explain {name} to a junior engineer who's new to it. Be precise: define the "
             f"core idea, when it matters, and one concrete example. Avoid hand-waving."
@@ -193,6 +201,8 @@ _TYPE_BRIEF = {
     "critique": "a short, deliberately flawed artifact (in given_artifact) for the learner to find and fix problems in",
     "explain": "a prompt asking the learner to explain the concept precisely to a stated audience",
     "code": "a small, self-contained coding task",
+    "project": "a REAL-WORLD build task the learner does in their own editor and brings back — "
+    "a concrete artifact (a script/module/repo) that genuinely exercises the competency",
 }
 
 
@@ -354,6 +364,9 @@ _TYPE_GRADING = {
     "explain": "This is an EXPLAIN rep: judge correctness, precision, and clarity of the explanation "
     "for the stated audience. There is no code; do not expect any.",
     "code": "This is a CODE rep: judge the submitted code.",
+    "project": "This is a PROJECT rep: the learner brought a real code artifact. Judge whether the "
+    "CODE genuinely exhibits the competency's target properties — reference specific lines/constructs. "
+    "A description without code scores low.",
 }
 
 

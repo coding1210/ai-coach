@@ -212,6 +212,15 @@ export async function fetchHint(
   return (await r.json()).hint ?? "";
 }
 
+export async function flagRep(repId: string): Promise<void> {
+  const { token } = await ensureSession();
+  await fetch(`${HTTP_BASE}/practice/flag`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ rep_id: repId }),
+  });
+}
+
 export async function fetchPracticeNext(): Promise<QueueItem[]> {
   const { token } = await ensureSession();
   const r = await fetch(`${HTTP_BASE}/practice/next`, { headers: authHeaders(token) });

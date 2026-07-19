@@ -8,6 +8,7 @@ import {
   fetchMastery,
   fetchPracticeNext,
   fetchRep,
+  flagRep,
   gradeRep,
 } from "@/lib/api";
 import { glossForCompetency } from "@/lib/glossary";
@@ -24,6 +25,7 @@ const TYPE_LABEL: Record<string, string> = {
   design: "Design rep",
   critique: "Critique rep",
   explain: "Explain rep",
+  project: "Real-world project",
 };
 
 type Status = "idle" | "loading" | "ready" | "grading" | "graded" | "error";
@@ -49,7 +51,7 @@ export default function Practice() {
     refreshState();
   }, [refreshState]);
 
-  async function startRep(competencyId?: string, targetLevel?: number) {
+  async function startRep(competencyId?: string, targetLevel?: number, repType?: string) {
     setStatus("loading");
     setErr("");
     setGrade(null);
@@ -59,6 +61,7 @@ export default function Practice() {
       const r = await fetchRep({
         ...(competencyId ? { competency_id: competencyId } : {}),
         ...(targetLevel ? { target_level: targetLevel } : {}),
+        ...(repType ? { type: repType } : {}),
       });
       setRep(r);
       setStatus("ready");
@@ -150,6 +153,14 @@ export default function Practice() {
           >
             Practice my top gap
           </button>
+          <button
+            onClick={() => startRep(undefined, undefined, "project")}
+            disabled={status === "loading"}
+            title="Build a real artifact in your own editor and bring it back to be graded"
+            className="rounded-md border border-edge px-3 py-2 text-xs font-medium text-mid transition-colors hover:border-accent/60 hover:text-hi disabled:opacity-40"
+          >
+            Real-world project
+          </button>
           <span className="text-xs text-faint">or pick:</span>
           <select
             onChange={(e) => e.target.value && startRep(e.target.value)}
@@ -195,17 +206,28 @@ export default function Practice() {
             </pre>
           )}
 
-          <textarea
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            disabled={status === "grading"}
-            spellCheck={rep.type !== "code"}
-            rows={rep.type === "code" ? 10 : 6}
-            placeholder={rep.type === "code" ? "# your solution" : "Your answer — be specific and concrete."}
-            className={`mt-4 w-full resize-y rounded-md border border-edge bg-black/40 p-3 text-sm leading-relaxed text-hi outline-none transition-colors focus:border-accent/60 disabled:opacity-60 ${
-              rep.type === "code" ? "font-mono text-[12px]" : ""
-            }`}
-          />
+          {rep.type === "project" && (
+            <p className="mt-3 rounded-md border border-accent/30 bg-accent/[0.06] px-3 py-2 text-xs leading-relaxed text-mid">
+              Build this in your own editor, then paste the code (or a key file) below. It&apos;s
+              graded on whether the real artifact demonstrates the competency.
+            </p>
+          )}
+          {(() => {
+            const codeLike = rep.type === "code" || rep.type === "project";
+            return (
+              <textarea
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                disabled={status === "grading"}
+                spellCheck={!codeLike}
+                rows={codeLike ? 10 : 6}
+                placeholder={codeLike ? "# your code" : "Your answer — be specific and concrete."}
+                className={`mt-4 w-full resize-y rounded-md border border-edge bg-black/40 p-3 text-sm leading-relaxed text-hi outline-none transition-colors focus:border-accent/60 disabled:opacity-60 ${
+                  codeLike ? "font-mono text-[12px]" : ""
+                }`}
+              />
+            );
+          })()}
 
           {hints.length > 0 && (
             <ul className="mt-3 space-y-1.5">
@@ -236,6 +258,16 @@ export default function Practice() {
               className="text-xs text-dim transition-colors hover:text-hi"
             >
               ↻ New rep
+            </button>
+            <button
+              onClick={() => {
+                flagRep(rep.id).catch(() => {});
+                startRep(rep.competency_id);
+              }}
+              title="This rep is confusing or off-topic — flag it and get another"
+              className="ml-auto text-xs text-faint transition-colors hover:text-warn"
+            >
+              ⚑ Report this rep
             </button>
           </div>
 
@@ -325,11 +357,16 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 function MasteryPanel({ mastery }: { mastery: MasteryItem[] }) {
+  const held = mastery.filter((m) => m.status === "held").length;
+  const practicing = mastery.filter((m) => m.status === "practicing").length;
   return (
     <section className="mt-8">
       <h3 className="mb-2.5 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
         <span className="h-1 w-1 rounded-full bg-accent" />
         Your practice
+        <span className="ml-1 font-normal normal-case tracking-normal text-faint">
+          · {held} held · {practicing} in progress
+        </span>
       </h3>
       <ul className="space-y-2">
         {mastery.map((m) => (

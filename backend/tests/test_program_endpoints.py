@@ -152,6 +152,23 @@ def test_practice_next_queue_is_prereq_gated(client):
     assert not any(x["competency_id"] == "rag.hybrid_rerank" for x in q)
 
 
+def test_practice_flag_and_stats(client):
+    h = _auth(client)
+    rep = client.post("/practice/rep", json={"competency_id": "rag.when_not"}, headers=h).json()
+    client.post("/practice/grade", json={"rep_id": rep["id"], "submission": "Skip RAG when the corpus fits in context."}, headers=h)
+    assert client.post("/practice/flag", json={"rep_id": rep["id"]}, headers=h).json()["ok"] is True
+    stats = client.get("/practice/rep-stats", headers=h).json()["stats"]
+    row = next((s for s in stats if s["rep_id"] == rep["id"]), None)
+    assert row and row["attempts"] >= 1 and row["flags"] >= 1
+
+
+def test_outcomes_include_mastery_snapshot(client):
+    h = _auth(client)
+    client.post("/outcome", json={"status": "interviewing", "role": "Gen AI Eng"}, headers=h)
+    body = client.get("/outcomes", headers=h).json()
+    assert "mastery_snapshot" in body and "held_count" in body["mastery_snapshot"]
+
+
 def test_outcome_tracking_roundtrip(client):
     h = _auth(client)
     client.post("/outcome", json={"status": "hired", "role": "Gen AI Engineer", "notes": "offer!"}, headers=h)

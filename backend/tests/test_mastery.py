@@ -56,6 +56,29 @@ async def test_revise_same_level_without_hints():
     assert p["scaffolded"] is False and p["next_level"] == 4
 
 
+@pytest.mark.asyncio
+async def test_flag_demotes_rep_out_of_rotation():
+    repo = MemoryRepository()
+    await repo.save_rep("rep_x", "rag.chunking", "code", 4, {"id": "rep_x"})
+    assert await repo.get_cached_rep("rag.chunking", "code", 4) is not None
+    await repo.flag_rep("rep_x")
+    await repo.flag_rep("rep_x")  # hits the demote threshold
+    assert await repo.get_cached_rep("rag.chunking", "code", 4) is None
+    stats = {s["rep_id"]: s for s in await repo.get_rep_stats()}
+    assert stats["rep_x"]["demoted"] is True and stats["rep_x"]["flags"] == 2
+
+
+@pytest.mark.asyncio
+async def test_project_rep_builds_and_grades():
+    from app.coaching.reps import generate_rep, grade_rep
+
+    rep = await generate_rep("py.async", 4, "project")
+    assert rep.type == "project"
+    assert any(w in rep.prompt.lower() for w in ("build", "artifact", "paste"))
+    g = await grade_rep(rep, "import asyncio\nasync def run(): ...")
+    assert 1 <= g["level"] <= 5 and g["target_level"] == 4
+
+
 def test_prereqs_gate():
     assert "rag.embeddings" in prereqs_for("rag.hybrid_rerank")
     assert prereqs_met("rag.hybrid_rerank", {"rag.embeddings": 3}) is True

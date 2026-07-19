@@ -296,7 +296,23 @@ async def practice_grade(
     rep = Rep.model_validate(data)
     grade = await grade_rep(rep, body.submission)
     progress = await update_mastery(repo, user_id, rep, grade, max(0, body.hints_used))
+    await repo.record_rep_outcome(rep.id, bool(grade.get("passed")), hint_exhausted=body.hints_used >= 3)
     return {**grade, **progress}
+
+
+@router.post("/practice/flag")
+async def practice_flag(
+    body: PracticeHintRequest, request: Request, user_id: str = Depends(current_user)
+) -> dict:
+    """Flag a rep as bad — enough flags auto-demote it out of rotation."""
+    await request.app.state.repo.flag_rep(body.rep_id)
+    return {"ok": True}
+
+
+@router.get("/practice/rep-stats")
+async def practice_rep_stats(request: Request, user_id: str = Depends(current_user)) -> dict:
+    """Rep-quality telemetry (attempts / pass rate / flags / demoted)."""
+    return {"stats": await request.app.state.repo.get_rep_stats()}
 
 
 @router.post("/practice/hint")
@@ -409,7 +425,18 @@ async def record_outcome(
 
 @router.get("/outcomes")
 async def get_outcomes(request: Request, user_id: str = Depends(current_user)) -> dict:
-    return {"outcomes": await request.app.state.repo.get_outcomes(user_id)}
+    """Outcomes joined with a mastery snapshot — the data path for later testing
+    whether demonstrated mastery predicts real results (no predictive claim yet)."""
+    repo = request.app.state.repo
+    mastery = await repo.get_all_mastery(user_id)
+    held = [cid for cid, m in mastery.items() if m.get("status") == "held"]
+    snapshot = {
+        "held_count": len(held),
+        "held": held,
+        "avg_level": round(sum(m.get("level", 0) for m in mastery.values()) / len(mastery), 2)
+        if mastery else 0,
+    }
+    return {"outcomes": await repo.get_outcomes(user_id), "mastery_snapshot": snapshot}
 
 
 @router.post("/share", response_model=ShareOut)

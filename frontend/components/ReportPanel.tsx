@@ -380,7 +380,7 @@ export default function ReportPanel({
       {/* Peer benchmark can demotivate a beginner — hidden until they're past the start. */}
       {!early && report.benchmark && report.benchmark.length > 0 && (
         <section>
-          <SectionLabel tone="accent">Benchmark · vs a typical Gen AI engineer</SectionLabel>
+          <SectionLabel tone="accent">Benchmark · vs a reference prior (not a live cohort)</SectionLabel>
           <ul className="space-y-2">
             {report.benchmark.slice(0, 6).map((b) => (
               <BenchmarkBar key={b.domain_id} b={b} />

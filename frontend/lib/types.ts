@@ -166,7 +166,7 @@ export interface Account {
 export interface PracticeRep {
   id: string;
   competency_id: string;
-  type: "code" | "design" | "critique" | "explain";
+  type: "code" | "design" | "critique" | "explain" | "project";
   target_level: number;
   difficulty: number;
   prompt: string;

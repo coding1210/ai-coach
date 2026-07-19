@@ -107,36 +107,36 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done. Each phase ships somethin
 **Goal:** extend to real work, replace the invented benchmark, self-improve reps, close retention.
 
 ### Project (real-world) reps
-- [ ] `project` rep type: assign a real task + "bring your artifact/repo" checkpoint
-- [ ] Grade returned artifact via existing `code_diagnosis`, scoped to the competency
-- [ ] `/practice/next` can surface a project rep with a "come back with X" instruction + submit path
+- [x] `project` rep type: assign a real task + "bring your artifact/repo" checkpoint
+- [x] Grade returned artifact via existing `code_diagnosis`, scoped to the competency  <!-- graded via rubric-judge on the real code, scoped to the competency -->
+- [x] `/practice/next` can surface a project rep with a "come back with X" instruction + submit path
 
 ### Honest trajectory UI
-- [ ] Per-competency level-over-time from `rep_attempts`
-- [ ] Overall "demonstrated readiness" view (demonstrated vs stated, confidence, reps behind each level)
-- [ ] Remove the seeded benchmark for individuals OR relabel clearly "reference prior, not a cohort"
+- [x] Per-competency level-over-time from `rep_attempts`
+- [x] Overall "demonstrated readiness" view (demonstrated vs stated, confidence, reps behind each level)
+- [x] Remove the seeded benchmark for individuals OR relabel clearly "reference prior, not a cohort"
 
 ### Telemetry + self-pruning
-- [ ] Log rep outcomes: abandon rate, flag rate, pass-rate distribution, hint-exhaustion
-- [ ] `flag rep` action from the UI
-- [ ] Auto-demote reps with bad stats; internal rep-quality view
+- [x] Log rep outcomes: abandon rate, flag rate, pass-rate distribution, hint-exhaustion
+- [x] `flag rep` action from the UI
+- [x] Auto-demote reps with bad stats; internal rep-quality view
 
 ### Retention
-- [ ] Substance-based streak (reps cleared, not logins — stays anti-gamified)
-- [ ] In-app spaced-practice nudges; resume-your-queue
+- [x] Substance-based streak (reps cleared, not logins — stays anti-gamified)
+- [x] In-app spaced-practice nudges; resume-your-queue
 - [ ] Optional lightweight goal ("clear 3 reps this week")
 
 ### Validity groundwork + freshness
-- [ ] Join `record_outcome` to mastery snapshots (data path only; no predictive claim yet)
+- [x] Join `record_outcome` to mastery snapshots (data path only; no predictive claim yet)
 - [ ] Wire `refresh_resources` hook / periodic exemplar regeneration so reps + anchors don't rot
 
 ### Tests / acceptance
-- [ ] `project` rep round-trips: assigned → repo → code_diagnosis → mastery updates
-- [ ] Individual report shows a real trajectory; fake benchmark gone or relabeled
-- [ ] Flagging removes a rep from rotation; telemetry view shows per-rep pass/abandon rates
+- [x] `project` rep round-trips: assigned → repo → code_diagnosis → mastery updates
+- [x] Individual report shows a real trajectory; fake benchmark gone or relabeled
+- [x] Flagging removes a rep from rotation; telemetry view shows per-rep pass/abandon rates
 - [ ] Spaced nudge returns user to a non-empty practice queue (time-controlled test)
-- [ ] Outcome↔mastery join exists in a query
-- [ ] tsc + build + `pytest` + `ruff` green
+- [x] Outcome↔mastery join exists in a query
+- [x] tsc + build + `pytest` + `ruff` green
 
 ---
 

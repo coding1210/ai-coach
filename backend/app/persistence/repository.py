@@ -103,7 +103,32 @@ class Repository(ABC):
 
     async def get_cached_rep(self, competency_id: str, rep_type: str, level: int) -> dict | None:
         rid = self._aux("rep_by_key").get(f"{competency_id}:{rep_type}:{level}")
-        return self._aux("reps").get(rid) if rid else None
+        if not rid or self._aux("rep_stats").get(rid, {}).get("demoted"):
+            return None  # regenerate instead of serving a flagged/bad rep
+        return self._aux("reps").get(rid)
+
+    # ── rep telemetry (self-pruning) ─────────────────────────────
+    _FLAG_DEMOTE_AT = 2
+
+    def _stat(self, rep_id: str) -> dict:
+        return self._aux("rep_stats").setdefault(
+            rep_id, {"attempts": 0, "passes": 0, "flags": 0, "hint_exhausted": 0, "demoted": False}
+        )
+
+    async def record_rep_outcome(self, rep_id: str, passed: bool, hint_exhausted: bool = False) -> None:
+        s = self._stat(rep_id)
+        s["attempts"] += 1
+        s["passes"] += 1 if passed else 0
+        s["hint_exhausted"] += 1 if hint_exhausted else 0
+
+    async def flag_rep(self, rep_id: str) -> None:
+        s = self._stat(rep_id)
+        s["flags"] += 1
+        if s["flags"] >= self._FLAG_DEMOTE_AT:
+            s["demoted"] = True
+
+    async def get_rep_stats(self) -> list[dict]:
+        return [{"rep_id": rid, **s} for rid, s in self._aux("rep_stats").items()]
 
     # ── practice attempts + mastery (the evidence trail) ─────────
     async def add_rep_attempt(self, user_id: str, attempt: dict) -> int:
