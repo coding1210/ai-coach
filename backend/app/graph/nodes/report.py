@@ -169,13 +169,14 @@ async def report(state: CoachState) -> dict:
     built["role_title"] = state.get("role_title", "")
     built["early_stage"] = built.get("early_stage") or bool(state.get("beginner"))
     built["benchmark"] = benchmark_report(built["radar"])
-    built["roadmap"] = build_roadmap(built, cmap)
+    early = built["early_stage"]
+    built["roadmap"] = build_roadmap(built, cmap, beginner=early)
 
     profile = state.get("profile") or {}
     # Enrich the roadmap and stream the spoken summary concurrently — the roadmap
     # is mutated in place, so it's fully enriched by the time we emit the report.
     _, narrative = await asyncio.gather(
-        enrich_roadmap(built["roadmap"], profile, built.get("role_title", "")),
+        enrich_roadmap(built["roadmap"], profile, built.get("role_title", ""), beginner=early),
         _narrative(built, profile, reassess, state.get("level", 1), state.get("beginner", False)),
     )
     emit({"type": "report", "data": built})

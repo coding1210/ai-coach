@@ -52,8 +52,20 @@ def test_build_roadmap_is_grounded_and_ordered():
     # Deterministic fallback always yields actionable content.
     assert len(m["practice"]) >= 2
     assert m["signal"] and m["focus"] and m["why"]
+    # A finishable-feeling time estimate is always present.
+    assert m["effort"]
     # The 'why' cites the domain weight (coaching prioritization).
     assert m["domain_weight"] in m["why"]
+
+
+def test_beginner_roadmap_scaffolds_a_gentle_first_step():
+    cmap = get_competency_map()
+    report = _report_with_weakness(cmap)
+    normal = build_roadmap(report, cmap)["milestones"][0]
+    beginner = build_roadmap(report, cmap, beginner=True)["milestones"][0]
+    # Beginner first step starts small (read/tiny), not "build an artifact".
+    assert beginner["practice"][0] != normal["practice"][0]
+    assert "small" in beginner["practice"][0].lower() or "tiny" in beginner["practice"][0].lower()
 
 
 def test_build_roadmap_caps_milestones_at_four():

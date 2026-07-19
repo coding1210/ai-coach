@@ -56,8 +56,20 @@ def _horizon(total_gap: int) -> str:
     return "the next couple of months"
 
 
-def build_roadmap(report: dict, cmap) -> dict:
-    """Deterministic skeleton: one milestone per top weak spot, priority-ordered."""
+def _effort(gap: int) -> str:
+    """A finishable-feeling time estimate to move this one rung."""
+    if gap <= 1:
+        return "a few focused hours"
+    if gap == 2:
+        return "about a week"
+    return "a couple of weeks"
+
+
+def build_roadmap(report: dict, cmap, *, beginner: bool = False) -> dict:
+    """Deterministic skeleton: one milestone per top weak spot, priority-ordered.
+
+    When `beginner`, the first step is scaffolded small (read a little, then a tiny
+    version) instead of "build an artifact"."""
     weaknesses = report.get("weaknesses", [])[:_MAX_MILESTONES]
     bank = get_exercise_bank()
     milestones: list[dict] = []
@@ -67,6 +79,7 @@ def build_roadmap(report: dict, cmap) -> dict:
         name = w["competency_name"]
         current = w["current_level"]
         target = w["target_level"]
+        gap = max(0, target - current)
         domain = cmap.domain_of(cid)
         has_exercise = bank.by_competency(cid) is not None
         anchor_level, anchor_text = _target_anchor(
@@ -78,15 +91,18 @@ def build_roadmap(report: dict, cmap) -> dict:
             + ("your biggest gap right now." if rank == 1 else f"gap #{rank} on your list.")
         )
         focus = anchor_text or f"operating at {_level_name(cmap, target)} level on {name}."
-        first = (
-            f"Take the graded {name} challenge below and iterate until it passes."
-            if has_exercise
-            else f"Build a small artifact that forces {name} — then explain the trade-offs you made."
+        if beginner:
+            first = f"Start small: read a short intro to {name}, then try the tiniest version in ~20 lines."
+        elif has_exercise:
+            first = f"Take the graded {name} challenge below and iterate until it passes."
+        else:
+            first = f"Build a small artifact that forces {name} — then explain the trade-offs you made."
+        second = (
+            f"Once that clicks, look at a real example of {name} and copy one thing it does well."
+            if beginner
+            else f"Read a strong reference implementation of {name} and note what it does that yours doesn't."
         )
-        practice = [
-            first,
-            f"Read a strong reference implementation of {name} and note what it does that yours doesn't.",
-        ]
+        practice = [first, second]
         signal = (
             f"You can show {_level_name(cmap, target)} judgement on {name}: {focus}"
             if focus
@@ -108,6 +124,7 @@ def build_roadmap(report: dict, cmap) -> dict:
                 "why": why,
                 "practice": practice,
                 "signal": signal,
+                "effort": _effort(gap),
                 "has_exercise": has_exercise,
                 "resources": resources_for(cid),
             }
@@ -169,9 +186,12 @@ def _as_list(practice) -> list[str]:
     return []
 
 
-async def enrich_roadmap(roadmap: dict, profile: dict, role_title: str = "") -> dict:
+async def enrich_roadmap(
+    roadmap: dict, profile: dict, role_title: str = "", *, beginner: bool = False
+) -> dict:
     """Overlay concrete, person-specific practice steps + success signals via the
-    coach model. Any failure leaves the deterministic templates untouched."""
+    coach model. Any failure leaves the deterministic templates untouched. When
+    `beginner`, ask for gentle, tiny, scaffolded first steps."""
     milestones = roadmap.get("milestones", [])
     if not milestones:
         return roadmap
@@ -189,10 +209,18 @@ async def enrich_roadmap(roadmap: dict, profile: dict, role_title: str = "") -> 
     role_line = f" They're aiming for a {role_title} role." if role_title else ""
     background = (profile or {}).get("background", "")
     ids = ", ".join(m["competency_id"] for m in milestones)
+    level_line = (
+        " They are a BEGINNER. Make the FIRST action tiny and unintimidating (a short read or a "
+        "20-line toy version), name a specific beginner-friendly resource/tutorial where you can, "
+        "and keep language plain — no unexplained jargon. Build up gently from there."
+        if beginner
+        else ""
+    )
     prompt = (
         "You are a coach building a growth plan for a Gen AI engineer."
         + role_line
         + (f" Background: {background}." if background else "")
+        + level_line
         + " For EACH competency below, write 2-3 CONCRETE, specific practice actions that move "
         "them toward the target — real things to build, read, or measure (never vague advice like "
         '"study more"). Then one observable success signal completing "You\'ll know you\'re there '

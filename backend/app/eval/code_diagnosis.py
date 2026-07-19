@@ -110,6 +110,7 @@ async def diagnose_code(
     built["role_title"] = role_title
     built["source"] = "code"
     built["benchmark"] = benchmark_report(built["radar"])
-    built["roadmap"] = build_roadmap(built, cmap)
-    await enrich_roadmap(built["roadmap"], profile or {}, role_title)
+    early = bool(built.get("early_stage"))
+    built["roadmap"] = build_roadmap(built, cmap, beginner=early)
+    await enrich_roadmap(built["roadmap"], profile or {}, role_title, beginner=early)
     return built

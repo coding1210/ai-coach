@@ -140,6 +140,12 @@ function MilestoneCard({ m }: { m: RoadmapMilestone }) {
           {gloss && <p className="mt-0.5 text-[11px] leading-snug text-faint">{gloss}</p>}
           <p className="mt-1.5 text-[11px] text-faint">{m.why}</p>
 
+          {m.effort && (
+            <span className="mt-2 inline-flex items-center gap-1 rounded-md border border-edge bg-ink/50 px-2 py-0.5 font-mono text-[10px] text-mid">
+              ⏱ {m.effort}
+            </span>
+          )}
+
           <p className="mt-2 text-xs leading-relaxed text-dim">
             <span className="text-mid">What good looks like: </span>
             {m.focus}
