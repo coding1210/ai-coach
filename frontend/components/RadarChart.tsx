@@ -74,18 +74,20 @@ export default function RadarChart({ radar }: { radar: RadarDomain[] }) {
         strokeWidth={1.25}
         strokeDasharray="3 3"
       />
-      {/* current — signal lime */}
-      <polygon
-        points={poly("current")}
-        fill="rgba(200,241,105,0.13)"
-        stroke="#c8f169"
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-      {radar.map((d, i) => {
-        const [x, y] = point(i, d.current);
-        return <circle key={d.domain_id} cx={x} cy={y} r={2.6} fill="#c8f169" />;
-      })}
+      {/* current — signal lime; grows in from the centre on reveal */}
+      <g className="radar-current">
+        <polygon
+          points={poly("current")}
+          fill="rgba(200,241,105,0.13)"
+          stroke="#c8f169"
+          strokeWidth={2}
+          strokeLinejoin="round"
+        />
+        {radar.map((d, i) => {
+          const [x, y] = point(i, d.current);
+          return <circle key={d.domain_id} cx={x} cy={y} r={2.6} fill="#c8f169" />;
+        })}
+      </g>
     </svg>
   );
 }
