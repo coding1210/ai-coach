@@ -16,6 +16,8 @@ const PHASE_LABEL: Record<string, string> = {
 export interface VoiceControls {
   enabled: boolean;
   toggle: () => void;
+  handsFree: boolean;
+  toggleHandsFree: () => void;
   listening: boolean;
   onMic: () => void;
   sttSupported: boolean;
@@ -81,9 +83,24 @@ export default function Chat({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {phase === "interview" && <InterviewTimer minutes={15} />}
           <span className="rounded-md border border-edge bg-ink/50 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-dim">
             {PHASE_LABEL[phase] ?? phase}
           </span>
+          {voice.sttSupported && (
+            <button
+              onClick={voice.toggleHandsFree}
+              aria-pressed={voice.handsFree}
+              title={voice.handsFree ? "Hands-free on — mic opens after the coach speaks" : "Hands-free mode"}
+              className={`grid h-8 w-8 place-items-center rounded-md border text-[11px] font-semibold transition-[transform,border-color,color,background-color] duration-200 ease-out-quart active:scale-95 ${
+                voice.handsFree
+                  ? "border-accent/40 bg-accent/10 text-accent"
+                  : "border-edge text-dim hover:border-edge-strong hover:text-mid"
+              }`}
+            >
+              HF
+            </button>
+          )}
           <button
             onClick={voice.toggle}
             aria-pressed={voice.enabled}
@@ -262,6 +279,34 @@ function Bubble({ message }: { message: ChatMessage }) {
         )}
       </div>
     </div>
+  );
+}
+
+function InterviewTimer({ minutes }: { minutes: number }) {
+  const [left, setLeft] = useState(minutes * 60);
+  const endRef = useRef<number>(Date.now() + minutes * 60 * 1000);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setLeft(Math.max(0, Math.round((endRef.current - Date.now()) / 1000)));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+  const mm = Math.floor(left / 60);
+  const ss = String(left % 60).padStart(2, "0");
+  const low = left <= 120;
+  return (
+    <span
+      title="Interview time remaining"
+      className={`nums rounded-md border px-2 py-1 font-mono text-[10px] tracking-[0.1em] ${
+        left === 0
+          ? "border-warn/50 bg-warn/10 text-warn"
+          : low
+            ? "border-warn/40 text-warn"
+            : "border-edge bg-ink/50 text-dim"
+      }`}
+    >
+      {left === 0 ? "TIME" : `${mm}:${ss}`}
+    </span>
   );
 }
 

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 
+from app.coaching.resources import resources_for
 from app.eval.exercises import get_exercise_bank
 from app.llm.router import get_router
 
@@ -108,6 +109,7 @@ def build_roadmap(report: dict, cmap) -> dict:
                 "practice": practice,
                 "signal": signal,
                 "has_exercise": has_exercise,
+                "resources": resources_for(cid),
             }
         )
 

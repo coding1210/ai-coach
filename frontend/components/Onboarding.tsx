@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import type { Profile } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { fetchRoles } from "@/lib/api";
+import type { Profile, RolePreset } from "@/lib/types";
 
 const PRESETS: { label: string; profile: Profile }[] = [
   {
@@ -22,12 +23,45 @@ const PRESETS: { label: string; profile: Profile }[] = [
   },
 ];
 
+type Mode = "coach" | "interview" | "code";
+
+const HEADINGS: Record<Mode, { tag: string; title: string; blurb: string }> = {
+  coach: {
+    tag: "New assessment",
+    title: "Tell your coach where you're headed",
+    blurb:
+      "No syllabus. The coach diagnoses your specific gaps and coaches those — progress means movement on your own weak areas.",
+  },
+  interview: {
+    tag: "Mock interview",
+    title: "Sit a mock interview for the role",
+    blurb:
+      "A realistic interviewer probes your depth, then debriefs with a hire verdict and where you stand. No coaching mid-interview.",
+  },
+  code: {
+    tag: "Diagnose from code",
+    title: "Diagnose me from my real code",
+    blurb:
+      "Paste a project or point at a public GitHub repo. The coach reads what your code actually does — async, retries, structured output, retrieval eval — and grades from evidence, not self-report.",
+  },
+};
+
 export default function Onboarding({
   onStart,
+  onDiagnoseCode,
   disabled,
+  diagnosing,
 }: {
   onStart: (p: Profile, mode: string) => void;
+  onDiagnoseCode: (payload: {
+    source: "paste" | "github";
+    content?: string;
+    url?: string;
+    role?: string | null;
+    profile: Profile;
+  }) => void;
   disabled?: boolean;
+  diagnosing?: boolean;
 }) {
   const [profile, setProfile] = useState<Profile>({
     goal: "",
@@ -35,44 +69,67 @@ export default function Onboarding({
     target_role: "",
     jd: "",
   });
-  const [mode, setMode] = useState<"coach" | "interview">("coach");
+  const [mode, setMode] = useState<Mode>("coach");
+  const [role, setRole] = useState<string>("");
+  const [roles, setRoles] = useState<RolePreset[]>([]);
+  const [code, setCode] = useState("");
+  const [repoUrl, setRepoUrl] = useState("");
+
+  useEffect(() => {
+    fetchRoles().then(setRoles).catch(() => {});
+  }, []);
 
   const set = (k: keyof Profile) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setProfile((p) => ({ ...p, [k]: e.target.value }));
 
-  const ready = profile.goal.trim() && profile.background.trim();
+  const withRole = (): Profile => ({ ...profile, role: role || undefined });
+
+  const ready =
+    mode === "code"
+      ? code.trim().length > 40 || repoUrl.trim().length > 0
+      : Boolean(profile.goal.trim() && profile.background.trim());
+
+  const h = HEADINGS[mode];
+
+  function submit() {
+    if (mode === "code") {
+      const useRepo = repoUrl.trim().length > 0;
+      onDiagnoseCode({
+        source: useRepo ? "github" : "paste",
+        content: useRepo ? undefined : code,
+        url: useRepo ? repoUrl.trim() : undefined,
+        role: role || null,
+        profile: withRole(),
+      });
+    } else {
+      onStart(withRole(), mode);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-lg animate-rise-in rounded-2xl border border-edge/70 bg-white/[0.015] p-1.5 shadow-panel">
       <div className="rounded-[13px] border border-edge/60 bg-panel p-6 sm:p-7">
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
-          {mode === "interview" ? "Mock interview" : "New assessment"}
+          {h.tag}
         </span>
         <h2 className="mt-2.5 text-xl font-semibold tracking-[-0.01em] text-hi">
-          {mode === "interview"
-            ? "Sit a mock interview for the role"
-            : "Tell your coach where you're headed"}
+          {h.title}
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-dim text-pretty">
-          {mode === "interview"
-            ? "A realistic interviewer probes your depth on the role, then debriefs with a hire verdict and where you stand. No coaching mid-interview."
-            : "No syllabus. The coach uses this to diagnose your specific gaps and coach those — progress means movement on your own weak areas."}
-        </p>
+        <p className="mt-1.5 text-sm leading-relaxed text-dim text-pretty">{h.blurb}</p>
 
-        <div className="mt-5 grid grid-cols-2 gap-1 rounded-lg border border-edge/70 bg-black/20 p-1">
+        <div className="mt-5 grid grid-cols-3 gap-1 rounded-lg border border-edge/70 bg-black/20 p-1">
           {(
             [
               ["coach", "Coaching"],
-              ["interview", "Mock interview"],
+              ["interview", "Interview"],
+              ["code", "From code"],
             ] as const
           ).map(([m, label]) => (
             <button
               key={m}
               onClick={() => setMode(m)}
               className={`rounded-md px-3 py-2 text-xs font-medium transition-[background,color] duration-200 ease-out-quart ${
-                mode === m
-                  ? "bg-accent text-accent-ink"
-                  : "text-mid hover:text-hi"
+                mode === m ? "bg-accent text-accent-ink" : "text-mid hover:text-hi"
               }`}
             >
               {label}
@@ -80,63 +137,104 @@ export default function Onboarding({
           ))}
         </div>
 
-        <div className="mt-6 space-y-4">
-          <Field label="Your goal">
-            <input
-              className="coach-input"
-              value={profile.goal}
-              onChange={set("goal")}
-              placeholder="e.g. become a senior Gen AI engineer"
-            />
-          </Field>
-          <Field label="Your background">
-            <input
-              className="coach-input"
-              value={profile.background}
-              onChange={set("background")}
-              placeholder="e.g. backend dev, strong Python, new to agents"
-            />
-          </Field>
-          <Field label="Target role (optional)">
-            <input
-              className="coach-input"
-              value={profile.target_role}
-              onChange={set("target_role")}
-              placeholder="e.g. Senior Gen AI Engineer"
-            />
-          </Field>
-          <Field label="Target job description (optional)">
-            <textarea
-              className="coach-input"
-              rows={3}
-              value={profile.jd ?? ""}
-              onChange={(e) => setProfile((p) => ({ ...p, jd: e.target.value }))}
-              placeholder="Paste a JD and the coach measures your gaps against that exact role."
-            />
-          </Field>
-        </div>
+        {roles.length > 0 && (
+          <div className="mt-4">
+            <Field label="Target role (sets the bar)">
+              <select
+                className="coach-input"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
+                <option value="">Generic senior bar</option>
+                {roles.map((r) => (
+                  <option key={r.key} value={r.key}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        )}
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
-            or load a persona
-          </span>
-          {PRESETS.map((p) => (
-            <button
-              key={p.label}
-              onClick={() => setProfile(p.profile)}
-              className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-mid transition-[transform,border-color,color] duration-200 ease-out-quart hover:border-accent/60 hover:text-hi active:scale-[0.97]"
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        {mode === "code" ? (
+          <div className="mt-4 space-y-4">
+            <Field label="Public GitHub repo URL (optional)">
+              <input
+                className="coach-input"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                placeholder="https://github.com/you/your-genai-project"
+              />
+            </Field>
+            <Field label={repoUrl.trim() ? "Or paste code (ignored — using the repo)" : "Paste your code"}>
+              <textarea
+                className="coach-input font-mono text-xs"
+                rows={9}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Paste one or more Python files from your project…"
+              />
+            </Field>
+          </div>
+        ) : (
+          <>
+            <div className="mt-4 space-y-4">
+              <Field label="Your goal">
+                <input
+                  className="coach-input"
+                  value={profile.goal}
+                  onChange={set("goal")}
+                  placeholder="e.g. become a senior Gen AI engineer"
+                />
+              </Field>
+              <Field label="Your background">
+                <input
+                  className="coach-input"
+                  value={profile.background}
+                  onChange={set("background")}
+                  placeholder="e.g. backend dev, strong Python, new to agents"
+                />
+              </Field>
+              <Field label="Target job description (optional)">
+                <textarea
+                  className="coach-input"
+                  rows={3}
+                  value={profile.jd ?? ""}
+                  onChange={(e) => setProfile((p) => ({ ...p, jd: e.target.value }))}
+                  placeholder="Paste a JD and the coach measures your gaps against that exact role."
+                />
+              </Field>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+                or load a persona
+              </span>
+              {PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => setProfile(p.profile)}
+                  className="rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-mid transition-[transform,border-color,color] duration-200 ease-out-quart hover:border-accent/60 hover:text-hi active:scale-[0.97]"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         <button
-          disabled={!ready || disabled}
-          onClick={() => onStart(profile, mode)}
+          disabled={!ready || disabled || diagnosing}
+          onClick={submit}
           className="group mt-7 flex w-full items-center justify-center gap-2.5 rounded-md bg-accent px-4 py-3 text-sm font-semibold text-accent-ink transition-[transform,box-shadow] duration-200 ease-out-quart hover:shadow-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30 disabled:shadow-none disabled:active:scale-100"
         >
-          {mode === "interview" ? "Start interview" : "Start assessment"}
+          {mode === "code"
+            ? diagnosing
+              ? "Reading your code…"
+              : "Diagnose my code"
+            : mode === "interview"
+              ? "Start interview"
+              : "Start assessment"}
           <span className="grid h-5 w-5 place-items-center rounded-full bg-accent-ink/15 transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
             →
           </span>
