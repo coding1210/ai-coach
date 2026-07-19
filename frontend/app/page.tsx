@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import Chat from "@/components/Chat";
+import DueNudge from "@/components/DueNudge";
 import Onboarding from "@/components/Onboarding";
 import ReportPanel from "@/components/ReportPanel";
+import { diagnoseCode } from "@/lib/api";
+import type { Profile, Report } from "@/lib/types";
 import { useCoachSession } from "@/lib/useCoachSession";
 import { useVoice } from "@/lib/useVoice";
 
@@ -12,7 +16,50 @@ export default function Home() {
   const { status, messages, report, phase, error, notice, start, send, finish } =
     useCoachSession({ onAssistantDone: voice.say });
 
+  const [codeReport, setCodeReport] = useState<Report | null>(null);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+
   const started = status !== "idle";
+
+  // Hands-free: when the coach finishes speaking, auto-open the mic for the reply.
+  const prevSpeaking = useRef(false);
+  useEffect(() => {
+    const finished = prevSpeaking.current && !voice.speaking;
+    prevSpeaking.current = voice.speaking;
+    const inputPhase = ["assess", "coach", "interview"].includes(phase);
+    if (
+      finished &&
+      voice.handsFree &&
+      started &&
+      inputPhase &&
+      voice.sttSupported &&
+      !voice.listening &&
+      status !== "thinking"
+    ) {
+      voice.listen(send);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voice.speaking, voice.handsFree, phase, status, started]);
+
+  async function handleDiagnose(payload: {
+    source: "paste" | "github";
+    content?: string;
+    url?: string;
+    role?: string | null;
+    profile: Profile;
+  }) {
+    setDiagnosing(true);
+    setCodeError(null);
+    try {
+      const r = await diagnoseCode(payload);
+      setCodeReport(r);
+    } catch (e) {
+      setCodeError(e instanceof Error ? e.message : "Diagnosis failed.");
+    } finally {
+      setDiagnosing(false);
+    }
+  }
 
   // Toggling voice on reads the message currently on screen (so the coach
   // "speaks" from where you are, including the opening greeting/question).
@@ -67,8 +114,29 @@ export default function Home() {
         </div>
       )}
 
-      {!started ? (
-        <Onboarding onStart={start} />
+      {codeError && (
+        <div className="mx-auto mb-6 max-w-2xl rounded-lg border border-red-500/30 bg-red-500/[0.07] px-4 py-2.5 text-sm text-red-300">
+          {codeError}
+        </div>
+      )}
+
+      {codeReport ? (
+        <div className="mx-auto max-w-2xl space-y-4">
+          <button
+            onClick={() => setCodeReport(null)}
+            className="text-xs text-dim transition-colors hover:text-hi"
+          >
+            ← New diagnosis
+          </button>
+          <Panel scroll>
+            <ReportPanel report={codeReport} shareable />
+          </Panel>
+        </div>
+      ) : !started ? (
+        <div className="mx-auto max-w-lg space-y-4">
+          <DueNudge onRecheck={() => start({ goal: "re-check my gaps", background: "returning learner", target_role: "" }, "coach")} />
+          <Onboarding onStart={start} onDiagnoseCode={handleDiagnose} diagnosing={diagnosing} />
+        </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1.15fr_1fr]">
           <Panel>
@@ -81,6 +149,8 @@ export default function Home() {
               voice={{
                 enabled: voice.enabled,
                 toggle: toggleVoice,
+                handsFree: voice.handsFree,
+                toggleHandsFree: voice.toggleHandsFree,
                 listening: voice.listening,
                 onMic: () => voice.listen(send),
                 sttSupported: voice.sttSupported,
@@ -91,7 +161,7 @@ export default function Home() {
 
           <Panel scroll>
             {report ? (
-              <ReportPanel report={report} speaking={voice.speaking} />
+              <ReportPanel report={report} speaking={voice.speaking} shareable />
             ) : (
               <EmptyReport speaking={voice.speaking} />
             )}

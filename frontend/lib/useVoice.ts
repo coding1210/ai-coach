@@ -20,6 +20,7 @@ export function useVoice() {
   // Voice on by default: the 'Start' click unlocks browser audio, so the
   // greeting and replies speak automatically. Users can mute with the toggle.
   const [enabled, setEnabled] = useState(true);
+  const [handsFree, setHandsFree] = useState(false);
   const [listening, setListening] = useState(false);
   const [sttSupported, setSttSupported] = useState(true);
   const [ttsEngine, setTtsEngine] = useState<TtsEngine>("none");
@@ -50,6 +51,18 @@ export function useVoice() {
       const next = !prev;
       if (next) warmupKokoro();
       else stopSpeaking();
+      return next;
+    });
+  }, []);
+
+  // Hands-free implies voice on; the caller auto-listens after the coach speaks.
+  const toggleHandsFree = useCallback(() => {
+    setHandsFree((prev) => {
+      const next = !prev;
+      if (next) {
+        setEnabled(true);
+        warmupKokoro();
+      }
       return next;
     });
   }, []);
@@ -111,6 +124,8 @@ export function useVoice() {
   return {
     enabled,
     toggleEnabled,
+    handsFree,
+    toggleHandsFree,
     listening,
     listen,
     stopListening,

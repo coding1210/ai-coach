@@ -64,6 +64,36 @@ export interface RoadmapMilestone {
   practice: string[];
   signal: string;
   has_exercise?: boolean; // a graded code challenge exists for this competency
+  resources?: ResourceLink[];
+}
+
+export interface ResourceLink {
+  title: string;
+  url: string;
+}
+
+export interface BenchmarkDomain {
+  domain_id: string;
+  domain_name: string;
+  you: number;
+  typical: number;
+  percentile: number;
+  standing: string; // "ahead of most" | "about typical" | "behind most"
+}
+
+export interface RolePreset {
+  key: string;
+  label: string;
+  description: string;
+}
+
+export interface DueItem {
+  competency_id: string;
+  competency_name: string;
+  current_level: number;
+  target_level: number;
+  days_overdue: number;
+  still_weak: boolean;
 }
 
 export interface Exercise {
@@ -87,6 +117,7 @@ export interface GradeResult {
   deterministic_score: number;
   evidence: string;
   checks: GradeCheck[];
+  execution?: { ran: boolean; passed: boolean; error?: string } | null;
 }
 
 export interface Roadmap {
@@ -104,6 +135,8 @@ export interface Report {
   verdict?: string; // hiring read, set in interview mode
   interview?: boolean; // true when produced by a mock-interview session
   roadmap?: Roadmap; // personalized growth plan (coaching mode)
+  benchmark?: BenchmarkDomain[]; // where you stand vs a typical engineer
+  source?: string; // "code" when diagnosed from real artifacts
 }
 
 export interface LedgerEntry {
@@ -119,6 +152,7 @@ export interface Profile {
   background: string;
   target_role: string;
   jd?: string; // optional pasted job description → role-specific targets
+  role?: string; // optional role-preset key → target overlay
 }
 
 // WebSocket server → client events.

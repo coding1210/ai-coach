@@ -153,6 +153,18 @@ function GradeResultView({
         </span>
       </div>
 
+      {result.execution && result.execution.ran && (
+        <p
+          className={`font-mono text-[11px] ${
+            result.execution.passed ? "text-accent" : "text-warn"
+          }`}
+        >
+          {result.execution.passed
+            ? "▸ ran in sandbox — tests passed"
+            : `▸ ran in sandbox — tests failed${result.execution.error ? `: ${result.execution.error}` : ""}`}
+        </p>
+      )}
+
       <ul className="space-y-1">
         {result.checks.map((c) => (
           <li
