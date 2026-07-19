@@ -37,6 +37,16 @@ class Settings(BaseSettings):
     coverage_threshold: float = 0.7
     log_level: str = "INFO"
 
+    # ─── Judging ─────────────────────────────────────────────────
+    # Ensemble judging: run N independent judges concurrently and aggregate,
+    # so a single noisy read can't swing the score. 1 = legacy single-judge.
+    judge_samples: int = 3
+
+    # ─── Sandbox ─────────────────────────────────────────────────
+    # Actually execute graded submissions against their hidden tests. OFF by
+    # default — running user code is a real risk; enable only in a trusted env.
+    enable_sandbox: bool = False
+
     @property
     def has_postgres(self) -> bool:
         return bool(self.database_url)

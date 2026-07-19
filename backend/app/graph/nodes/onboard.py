@@ -61,6 +61,12 @@ async def _parse_jd(profile: dict) -> tuple[dict[str, int], str]:
     levels + a role title. Empty/failed → ({}, '') so targets fall back to generic."""
     jd = (profile or {}).get("jd", "").strip()
     if not jd:
+        # No JD, but a role preset can still set the target bar.
+        role = (profile or {}).get("role")
+        if role:
+            from app.coaching.roles import role_label, targets_for_role
+
+            return targets_for_role(role), role_label(role)
         return {}, ""
     cmap = get_competency_map()
     dids = [d.id for d in cmap.domains]

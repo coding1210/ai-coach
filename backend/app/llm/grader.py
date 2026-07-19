@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.config import get_settings
 from app.eval.exercises import Exercise
 from app.llm.judge import JUDGE_SCHEMA
 from app.llm.providers import Message
@@ -76,7 +77,8 @@ def _judge_messages(exercise: Exercise, submission: str, checks: list[dict]) -> 
 
 
 async def grade_submission(exercise: Exercise, submission: str) -> dict[str, Any]:
-    """Return {competency_id, level, evidence, confidence, checks, deterministic_score}."""
+    """Return {competency_id, level, evidence, confidence, checks,
+    deterministic_score, execution}."""
     checks, det_score = run_checks(exercise, submission)
 
     raw = await get_router().complete_json(
@@ -85,14 +87,31 @@ async def grade_submission(exercise: Exercise, submission: str) -> dict[str, Any
 
     judged = max(1, min(5, int(raw.get("level", 3))))
     cap = _cap_for(det_score)
+
+    # Dynamic signal: if enabled and the exercise ships hidden tests, actually
+    # run the code. Proven-working code shouldn't be held down by strict regexes;
+    # code that runs but fails its tests can't be Proficient.
+    execution: dict | None = None
+    if get_settings().enable_sandbox and exercise.tests:
+        from app.eval.sandbox import run_submission
+
+        execution = await run_submission(submission, exercise.tests)
+        if execution.get("passed"):
+            cap = max(cap, 4)
+        elif execution.get("ran"):
+            cap = min(cap, 3)
+
     level = min(judged, cap)
 
     evidence = str(raw.get("evidence", "")).strip()
     if level < judged:
-        missing = ", ".join(c["description"] for c in checks if not c["passed"])
-        evidence = (
-            f"{evidence} [Capped at L{level}: objective checks failed — missing {missing}.]"
-        )
+        if execution and execution.get("ran") and not execution.get("passed"):
+            evidence = f"{evidence} [Capped at L{level}: the code ran but failed its tests.]"
+        else:
+            missing = ", ".join(c["description"] for c in checks if not c["passed"])
+            evidence = f"{evidence} [Capped at L{level}: objective checks failed — missing {missing}.]"
+    elif execution and execution.get("passed"):
+        evidence = f"{evidence} [Verified: ran and passed its hidden tests.]"
 
     return {
         "competency_id": exercise.competency_id,
@@ -101,4 +120,5 @@ async def grade_submission(exercise: Exercise, submission: str) -> dict[str, Any
         "confidence": max(0.0, min(1.0, float(raw.get("confidence", 0.5)))),
         "checks": checks,
         "deterministic_score": round(det_score, 2),
+        "execution": execution,
     }

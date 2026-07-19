@@ -70,6 +70,7 @@ class GradeResponse(BaseModel):
     deterministic_score: float
     evidence: str
     checks: list[CheckResult]
+    execution: dict | None = None  # sandbox run result when enabled (ran/passed/error)
 
 
 # ─── WebSocket protocol ──────────────────────────────────────────
@@ -80,8 +81,28 @@ class WSClientMessage(BaseModel):
     thread_id: str | None = None
     token: str | None = None  # bearer token (on start) → resolves the user
     content: str = ""
-    profile: dict | None = None  # goal, background, target_role (on start)
+    profile: dict | None = None  # goal, background, target_role, role (on start)
     mode: str | None = None  # coach | interview (on start)
+
+
+# ─── Program features (code diagnosis / outcomes / sharing) ──────
+class CodeDiagnoseRequest(BaseModel):
+    source: str = "paste"  # paste | github
+    content: str = ""  # pasted code (source=paste)
+    url: str = ""  # public repo URL (source=github)
+    profile: dict | None = None
+    role: str | None = None  # optional role preset key
+
+
+class OutcomeIn(BaseModel):
+    status: str  # interviewing | offer | hired | promoted | no_offer
+    role: str = ""
+    notes: str = ""
+
+
+class ShareOut(BaseModel):
+    token: str
+    url: str
 
 
 class WSServerEvent(BaseModel):

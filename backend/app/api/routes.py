@@ -16,9 +16,12 @@ from app.auth import current_user, new_token, new_user_id
 from app.models import (
     AssessmentEvent,
     AuthSessionOut,
+    CodeDiagnoseRequest,
     ExerciseOut,
     GradeRequest,
     GradeResponse,
+    OutcomeIn,
+    ShareOut,
 )
 
 router = APIRouter()
@@ -120,7 +123,129 @@ async def grade(
         deterministic_score=result["deterministic_score"],
         evidence=result["evidence"],
         checks=result["checks"],
+        execution=result.get("execution"),
     )
+
+
+@router.get("/roles")
+async def list_role_presets() -> dict:
+    from app.coaching.roles import list_roles
+
+    return {"roles": list_roles()}
+
+
+@router.get("/due")
+async def get_due(request: Request, user_id: str = Depends(current_user)) -> dict:
+    """Competencies due for a spaced re-check, most-overdue first."""
+    from datetime import datetime, timezone
+
+    from app.coaching.scheduler import due_items
+    from app.competency.loader import get_competency_map
+
+    repo = request.app.state.repo
+    entries = await repo.get_progress(user_id)
+    reviews = await repo.get_next_reviews(user_id)
+    items = due_items(entries, reviews, datetime.now(timezone.utc), cmap=get_competency_map())
+    return {"due": items}
+
+
+@router.post("/diagnose/code")
+async def diagnose_from_code(
+    body: CodeDiagnoseRequest, request: Request, user_id: str = Depends(current_user)
+) -> dict:
+    """Diagnose the user from real code (pasted or a public GitHub repo)."""
+    from datetime import datetime, timezone
+
+    from app.coaching.roles import role_label, targets_for_role
+    from app.coaching.scheduler import schedule_after_session
+    from app.competency.loader import get_competency_map
+    from app.competency.selection import target_for
+    from app.eval.code_diagnosis import diagnose_code, fetch_github
+
+    if body.source == "github":
+        try:
+            code = await fetch_github(body.url)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+    else:
+        code = body.content or ""
+    if len(code.strip()) < 40:
+        raise HTTPException(status_code=400, detail="Please provide more code to diagnose from.")
+
+    jd_targets = targets_for_role(body.role)
+    report = await diagnose_code(
+        code, profile=body.profile or {}, jd_targets=jd_targets, role_title=role_label(body.role)
+    )
+
+    # Persist like a session so /report, /progress, and scheduling all work.
+    cmap = get_competency_map()
+    repo = request.app.state.repo
+    session_id = "code_" + uuid.uuid4().hex[:8]
+    await repo.start_session(session_id, user_id, session_id)
+    events = []
+    for entry in report.get("weaknesses", []) + report.get("strengths", []):
+        cid = entry["competency_id"]
+        events.append(
+            AssessmentEvent(competency_id=cid, level=entry["current_level"], evidence=entry.get("evidence", ""), confidence=0.6)
+        )
+        await repo.upsert_ledger_entry(
+            user_id, cid, current_level=entry["current_level"], target_level=target_for(cmap, cid, jd_targets)
+        )
+    await repo.record_assessments(session_id, user_id, events)
+    await repo.finish_session(session_id, report)
+    entries = await repo.get_progress(user_id)
+    for cid, when in schedule_after_session(entries, datetime.now(timezone.utc)).items():
+        await repo.set_next_review(user_id, cid, when)
+
+    return report
+
+
+@router.post("/outcome")
+async def record_outcome(
+    body: OutcomeIn, request: Request, user_id: str = Depends(current_user)
+) -> dict:
+    """Track a real-world outcome — the credibility signal (coaching → result)."""
+    from datetime import datetime, timezone
+
+    outcome = {
+        "status": body.status,
+        "role": body.role,
+        "notes": body.notes,
+        "at": datetime.now(timezone.utc).isoformat(),
+    }
+    await request.app.state.repo.record_outcome(user_id, outcome)
+    return {"ok": True, "outcome": outcome}
+
+
+@router.get("/outcomes")
+async def get_outcomes(request: Request, user_id: str = Depends(current_user)) -> dict:
+    return {"outcomes": await request.app.state.repo.get_outcomes(user_id)}
+
+
+@router.post("/share", response_model=ShareOut)
+async def share_report(request: Request, user_id: str = Depends(current_user)) -> ShareOut:
+    """Create an opaque, read-only share token for the latest growth report."""
+    repo = request.app.state.repo
+    report = await repo.get_latest_report(user_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="No report to share yet.")
+    progress = await repo.get_progress(user_id)
+    token = uuid.uuid4().hex
+    snapshot = {
+        "report": report,
+        "progress": [{**e.model_dump(), "growth": e.growth} for e in progress],
+    }
+    await repo.create_share(token, snapshot)
+    return ShareOut(token=token, url=f"/shared/{token}")
+
+
+@router.get("/shared/{token}")
+async def get_shared(token: str, request: Request) -> dict:
+    """Public, read-only snapshot — no auth (the opaque token is the capability)."""
+    snapshot = await request.app.state.repo.get_share(token)
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail="Shared report not found.")
+    return snapshot
 
 
 class ResumeRequest(BaseModel):

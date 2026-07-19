@@ -9,9 +9,12 @@ truth.
 
 from __future__ import annotations
 
+import asyncio
+import statistics
 from typing import Any
 
 from app.competency.loader import Competency, get_competency_map
+from app.config import get_settings
 from app.llm.providers import Message
 from app.llm.router import get_router
 
@@ -65,20 +68,48 @@ def build_judge_messages(
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
-async def score_answer(
-    competency: Competency, question: str, answer: str
-) -> dict[str, Any]:
-    """Return a CompetencyScore-shaped dict: {competency_id, level, evidence, confidence}."""
-    messages = build_judge_messages(competency, question, answer)
-    raw = await get_router().complete_json("score", messages, schema=JUDGE_SCHEMA, temperature=0.0)
+def _one_verdict(raw: dict[str, Any]) -> dict[str, Any]:
+    level = max(1, min(5, int(raw.get("level", 3))))
+    confidence = max(0.0, min(1.0, float(raw.get("confidence", 0.5))))
+    return {"level": level, "evidence": str(raw.get("evidence", "")).strip(), "confidence": confidence}
 
-    level = int(raw.get("level", 3))
-    level = max(1, min(5, level))
-    confidence = float(raw.get("confidence", 0.5))
-    confidence = max(0.0, min(1.0, confidence))
+
+def _aggregate(verdicts: list[dict[str, Any]]) -> dict[str, Any]:
+    """Ensemble: median level, agreement-weighted confidence, evidence from a
+    judge that landed on the consensus level."""
+    levels = [v["level"] for v in verdicts]
+    level = round(statistics.median(levels))
+    agreement = sum(1 for lv in levels if lv == level) / len(levels)
+    model_conf = statistics.mean(v["confidence"] for v in verdicts)
+    # A tight panel that also self-reports confidence is what we trust most.
+    confidence = round(agreement * model_conf, 3)
+    evidence = next((v["evidence"] for v in verdicts if v["level"] == level and v["evidence"]), "")
     return {
-        "competency_id": competency.id,
         "level": level,
-        "evidence": str(raw.get("evidence", "")).strip(),
+        "evidence": evidence or (verdicts[0]["evidence"] if verdicts else ""),
         "confidence": confidence,
+        "agreement": round(agreement, 3),
+        "samples": len(verdicts),
     }
+
+
+async def score_answer(
+    competency: Competency, question: str, answer: str, *, samples: int | None = None
+) -> dict[str, Any]:
+    """Return a CompetencyScore-shaped dict: {competency_id, level, evidence, confidence}.
+
+    Runs `samples` independent judges CONCURRENTLY (wall-clock ≈ one call) and
+    aggregates — a single noisy read can't swing the score. `samples=1` restores
+    the legacy single-judge behaviour."""
+    n = samples if samples is not None else max(1, get_settings().judge_samples)
+    messages = build_judge_messages(competency, question, answer)
+
+    # A touch of temperature on the panel (past the first) gives independent reads.
+    async def _run(i: int) -> dict[str, Any]:
+        temp = 0.0 if i == 0 else 0.4
+        raw = await get_router().complete_json("score", messages, schema=JUDGE_SCHEMA, temperature=temp)
+        return _one_verdict(raw)
+
+    verdicts = await asyncio.gather(*[_run(i) for i in range(n)])
+    agg = _aggregate(list(verdicts))
+    return {"competency_id": competency.id, **agg}

@@ -8,8 +8,11 @@ is skipped (keeps the graph runnable in bare unit tests).
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from langchain_core.runnables import RunnableConfig
 
+from app.coaching.scheduler import schedule_after_session
 from app.competency.loader import get_competency_map
 from app.competency.selection import target_for
 from app.graph.state import CoachState
@@ -59,5 +62,10 @@ async def persist(state: CoachState, config: RunnableConfig) -> dict:
         )
 
     await repo.finish_session(session_id, state.get("report"))
+
+    # Schedule spaced re-assessment so the coach resurfaces weak spots over time.
+    entries = await repo.get_progress(user_id)
+    for cid, when in schedule_after_session(entries, datetime.now(timezone.utc)).items():
+        await repo.set_next_review(user_id, cid, when)
 
     return {"phase": "done", "messages": [closing]}
