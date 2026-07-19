@@ -129,21 +129,37 @@ export default function Chat({
       </div>
 
       <div className="border-t border-edge/70 p-3">
-        {(phase === "assess" || phase === "interview") && canSend && (
-          <div className="mb-2 flex justify-end">
-            <button
-              onClick={onFinish}
-              className="group flex items-center gap-1.5 text-xs text-dim transition-colors duration-200 hover:text-accent"
-            >
-              {phase === "interview"
-                ? "Wrap up the interview & debrief"
-                : "Answered enough? See my evaluation"}
-              <span className="transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
-                →
-              </span>
-            </button>
-          </div>
-        )}
+        {canSend &&
+          (phase === "assess" || phase === "coach" || phase === "interview") && (
+            <div className="mb-2 flex items-center justify-between gap-3">
+              {phase !== "interview" ? (
+                <button
+                  onClick={() =>
+                    onSend("Can you explain that in simple terms before I answer?")
+                  }
+                  title="Not sure what this means? The coach explains it plainly, then re-asks."
+                  className="flex items-center gap-1.5 text-xs text-dim transition-colors duration-200 hover:text-accent"
+                >
+                  <span aria-hidden="true">💡</span> Explain this
+                </button>
+              ) : (
+                <span />
+              )}
+              {(phase === "assess" || phase === "interview") && (
+                <button
+                  onClick={onFinish}
+                  className="group flex items-center gap-1.5 text-xs text-dim transition-colors duration-200 hover:text-accent"
+                >
+                  {phase === "interview"
+                    ? "Wrap up the interview & debrief"
+                    : "Answered enough? See my evaluation"}
+                  <span className="transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
+                    →
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
         <div className="flex items-end gap-2">
           {voice.enabled && voice.sttSupported && (
             <button

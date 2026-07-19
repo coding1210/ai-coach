@@ -12,6 +12,7 @@ advanced:
 
 from __future__ import annotations
 
+from app.competency.loader import get_competency_map
 from app.graph.state import CoachState
 from app.graph.streaming import emit_streamed_text
 from app.llm.persona import COACH_PERSONA
@@ -96,12 +97,43 @@ _ASIDE = {
 }
 
 
+def _teach_task(state: CoachState) -> str:
+    """A 'teach me this' moment: explain the concept in the question plainly, then
+    re-pose. Grounded in the current competency so the explanation is on-topic, and
+    dialed to plain language for a beginner (teach the minimum to unblock, then let
+    them try — still coaching, not lecturing)."""
+    cmap = get_competency_map()
+    cid = state.get("current_competency_id")
+    name = ""
+    if cid:
+        try:
+            name = cmap.competency(cid).name
+        except KeyError:
+            name = ""
+    question = state.get("current_question") or ""
+    plain = (
+        " They're new to this, so use plain language, avoid jargon (or define it in a few words), "
+        "and give a tiny concrete example."
+        if state.get("beginner")
+        else ""
+    )
+    topic = f" about {name}" if name else ""
+    return (
+        f"They asked you to explain instead of answering{topic}."
+        + plain
+        + " Give a short, clear explanation (2-4 sentences) that genuinely unblocks them — "
+        "the minimum they need — then gently re-pose the question so they can take a swing"
+        + (f': "{question}"' if question else ".")
+    )
+
+
 async def aside(state: CoachState) -> dict:
-    task = _ASIDE.get(state.get("intent", "question_back"), _ASIDE["question_back"])
+    intent = state.get("intent", "question_back")
+    task = _teach_task(state) if intent == "question_back" else _ASIDE.get(intent, _ASIDE["question_back"])
     content = await emit_streamed_text(
         "coach",
         [{"role": "system", "content": COACH_PERSONA}, {"role": "user", "content": task}],
         temperature=0.5,
-        max_tokens=180,
+        max_tokens=220,
     )
     return {"messages": [{"role": "assistant", "content": content}]}

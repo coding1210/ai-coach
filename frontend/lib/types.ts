@@ -63,6 +63,7 @@ export interface RoadmapMilestone {
   why: string;
   practice: string[];
   signal: string;
+  effort?: string; // finishable-feeling time estimate to move this rung
   has_exercise?: boolean; // a graded code challenge exists for this competency
   resources?: ResourceLink[];
 }
