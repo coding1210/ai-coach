@@ -22,6 +22,7 @@ from app.models import (
     GradeResponse,
     OutcomeIn,
     PracticeGradeRequest,
+    PracticeHintRequest,
     PracticeRepRequest,
     ShareOut,
 )
@@ -284,14 +285,109 @@ async def practice_rep(
 async def practice_grade(
     body: PracticeGradeRequest, request: Request, user_id: str = Depends(current_user)
 ) -> dict:
-    """Grade a practice submission against the rep's (server-held) rubric."""
+    """Grade a submission, record the attempt, update mastery, and say what's next."""
+    from app.coaching.mastery import update_mastery
     from app.coaching.reps import Rep, grade_rep
+
+    repo = request.app.state.repo
+    data = await repo.get_rep(body.rep_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Rep not found — generate a new one.")
+    rep = Rep.model_validate(data)
+    grade = await grade_rep(rep, body.submission)
+    progress = await update_mastery(repo, user_id, rep, grade, max(0, body.hints_used))
+    return {**grade, **progress}
+
+
+@router.post("/practice/hint")
+async def practice_hint(
+    body: PracticeHintRequest, request: Request, user_id: str = Depends(current_user)
+) -> dict:
+    """A graduated hint (tier 1-3) for the current rep."""
+    from app.coaching.hints import hint
+    from app.coaching.reps import Rep
 
     data = await request.app.state.repo.get_rep(body.rep_id)
     if not data:
         raise HTTPException(status_code=404, detail="Rep not found — generate a new one.")
     rep = Rep.model_validate(data)
-    return await grade_rep(rep, body.submission)
+    return {"tier": max(1, min(3, body.tier)), "hint": await hint(rep, body.submission, body.tier)}
+
+
+@router.get("/practice/mastery")
+async def practice_mastery(request: Request, user_id: str = Depends(current_user)) -> dict:
+    """All practice mastery + a compact attempt trajectory per competency."""
+    from app.competency.loader import get_competency_map
+
+    cmap = get_competency_map()
+    repo = request.app.state.repo
+    mastery = await repo.get_all_mastery(user_id)
+    attempts = await repo.get_rep_attempts(user_id)
+    traj: dict[str, list] = {}
+    for a in attempts:
+        traj.setdefault(a["competency_id"], []).append(
+            {"attempt_no": a.get("attempt_no"), "level": a.get("level_awarded"), "passed": a.get("passed")}
+        )
+    out = []
+    for cid, m in mastery.items():
+        try:
+            name = cmap.competency(cid).name
+        except KeyError:
+            name = cid
+        out.append({**m, "competency_name": name, "trajectory": traj.get(cid, [])})
+    out.sort(key=lambda x: (x.get("status") != "held", x.get("competency_name", "")))
+    return {"mastery": out}
+
+
+@router.get("/practice/next")
+async def practice_next(request: Request, user_id: str = Depends(current_user)) -> dict:
+    """The session queue: what to practise next, priority × due × mastery, prereq-gated."""
+    from datetime import datetime, timezone
+
+    from app.competency.loader import get_competency_map
+    from app.competency.prereqs import prereqs_met
+    from app.competency.selection import target_for
+
+    cmap = get_competency_map()
+    repo = request.app.state.repo
+    report = await repo.get_latest_report(user_id)
+    mastery = await repo.get_all_mastery(user_id)
+    levels = {cid: int(m.get("level") or 0) for cid, m in mastery.items()}
+    now = datetime.now(timezone.utc).isoformat()
+
+    def entry(cid: str, reason: str) -> dict:
+        m = mastery.get(cid, {})
+        return {
+            "competency_id": cid,
+            "competency_name": cmap.competency(cid).name,
+            "status": m.get("status", "unseen"),
+            "target_level": target_for(cmap, cid, (report or {}).get("jd_targets") if report else None),
+            "current_level": int(m.get("level") or 0),
+            "reason": reason,
+        }
+
+    queue: list[dict] = []
+    seen: set[str] = set()
+
+    # 1) Anything due for a spaced re-rep (and not yet held).
+    for cid, m in mastery.items():
+        if m.get("status") != "held" and (m.get("next_rep_due_at") or "") <= now:
+            queue.append(entry(cid, "due for a re-check"))
+            seen.add(cid)
+
+    # 2) Top gaps from the report, prereq-gated, skipping held/blocked.
+    for w in (report or {}).get("weaknesses", []):
+        cid = w["competency_id"]
+        if cid in seen or mastery.get(cid, {}).get("status") == "held":
+            continue
+        if not prereqs_met(cid, levels):
+            continue
+        queue.append(entry(cid, "a top gap for your target"))
+        seen.add(cid)
+        if len(queue) >= 6:
+            break
+
+    return {"queue": queue}
 
 
 @router.post("/outcome")

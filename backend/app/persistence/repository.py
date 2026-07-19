@@ -105,5 +105,28 @@ class Repository(ABC):
         rid = self._aux("rep_by_key").get(f"{competency_id}:{rep_type}:{level}")
         return self._aux("reps").get(rid) if rid else None
 
+    # ── practice attempts + mastery (the evidence trail) ─────────
+    async def add_rep_attempt(self, user_id: str, attempt: dict) -> int:
+        """Append a graded attempt; returns its attempt number for this competency."""
+        hist = self._aux("attempts").setdefault(user_id, [])
+        n = sum(1 for a in hist if a.get("competency_id") == attempt.get("competency_id")) + 1
+        hist.append({**attempt, "attempt_no": n})
+        return n
+
+    async def get_rep_attempts(self, user_id: str, competency_id: str | None = None) -> list[dict]:
+        hist = self._aux("attempts").get(user_id, [])
+        if competency_id is None:
+            return list(hist)
+        return [a for a in hist if a.get("competency_id") == competency_id]
+
+    async def get_mastery(self, user_id: str, competency_id: str) -> dict | None:
+        return self._aux("mastery").get(user_id, {}).get(competency_id)
+
+    async def get_all_mastery(self, user_id: str) -> dict[str, dict]:
+        return dict(self._aux("mastery").get(user_id, {}))
+
+    async def upsert_mastery(self, user_id: str, competency_id: str, data: dict) -> None:
+        self._aux("mastery").setdefault(user_id, {})[competency_id] = data
+
     async def close(self) -> None:  # optional lifecycle hook
         return None

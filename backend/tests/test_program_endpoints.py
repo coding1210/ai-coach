@@ -121,6 +121,37 @@ def test_practice_grade_unknown_rep_404(client):
     assert client.post("/practice/grade", json={"rep_id": "rep_nope", "submission": "x"}, headers=h).status_code == 404
 
 
+def test_practice_grade_updates_mastery_and_next(client):
+    h = _auth(client)
+    rep = client.post("/practice/rep", json={"competency_id": "rag.when_not"}, headers=h).json()
+    g = client.post(
+        "/practice/grade",
+        json={"rep_id": rep["id"], "submission": "Skip RAG when the corpus fits in context.", "hints_used": 0},
+        headers=h,
+    ).json()
+    assert "held" in g and "next_level" in g and "mastery" in g
+    # mastery endpoint now reflects the attempt
+    m = client.get("/practice/mastery", headers=h).json()["mastery"]
+    assert any(x["competency_id"] == "rag.when_not" and x["trajectory"] for x in m)
+
+
+def test_practice_hint_tiers(client):
+    h = _auth(client)
+    rep = client.post("/practice/rep", json={"competency_id": "rag.when_not"}, headers=h).json()
+    r = client.post("/practice/hint", json={"rep_id": rep["id"], "tier": 1, "submission": ""}, headers=h)
+    assert r.status_code == 200 and r.json()["hint"]
+
+
+def test_practice_next_queue_is_prereq_gated(client):
+    h = _auth(client)
+    # A code diagnosis seeds weaknesses; the queue is built from them, prereq-gated.
+    client.post("/diagnose/code", json={"source": "paste", "content": _CODE}, headers=h)
+    q = client.get("/practice/next", headers=h).json()["queue"]
+    assert isinstance(q, list)
+    # hybrid_rerank must not appear before embeddings is demonstrated
+    assert not any(x["competency_id"] == "rag.hybrid_rerank" for x in q)
+
+
 def test_outcome_tracking_roundtrip(client):
     h = _auth(client)
     client.post("/outcome", json={"status": "hired", "role": "Gen AI Engineer", "notes": "offer!"}, headers=h)

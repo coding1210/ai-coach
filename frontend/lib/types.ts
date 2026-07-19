@@ -183,6 +183,30 @@ export interface RepGrade {
   target_level: number;
   evidence?: string;
   criteria_results?: { id: string; met: boolean; note?: string }[];
+  // Phase 2 — mastery + advance
+  held?: boolean;
+  next_level?: number | null;
+  scaffolded?: boolean;
+  mastery?: MasteryItem;
+}
+
+export interface MasteryItem {
+  competency_id: string;
+  competency_name?: string;
+  level: number;
+  confidence: number;
+  status: "unseen" | "practicing" | "held" | "needs_refresh";
+  reps_cleared_at_target?: number;
+  trajectory?: { attempt_no: number; level: number; passed: boolean }[];
+}
+
+export interface QueueItem {
+  competency_id: string;
+  competency_name: string;
+  status: string;
+  target_level: number;
+  current_level: number;
+  reason: string;
 }
 
 export interface LedgerEntry {

@@ -1,0 +1,16 @@
+{
+  "description": "Lightweight prerequisite edges: a competency shouldn't be served for practice before its foundations are demonstrated. Keeps beginners off ungrounded reps.",
+  "prereqs": {
+    "rag.hybrid_rerank": ["rag.embeddings"],
+    "rag.graph_rag": ["rag.embeddings"],
+    "rag.retrieval_eval": ["rag.embeddings"],
+    "agents.react_planning": ["agents.tool_calling"],
+    "agents.multi_agent": ["agents.react_planning"],
+    "agents.langgraph": ["agents.tool_calling"],
+    "eval.llm_judge": ["eval.design_golden"],
+    "eval.frameworks": ["eval.design_golden"],
+    "eval.agent_quality": ["eval.design_golden"],
+    "ft.lora_qlora": ["ft.decision"],
+    "safety.red_teaming": ["safety.prompt_injection"]
+  }
+}

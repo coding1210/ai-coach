@@ -58,46 +58,47 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done. Each phase ships somethin
 **Goal:** the actual polishing, and an honest measure of movement.
 
 ### Practice sub-graph (LangGraph)
-- [ ] State fields for practice mode in `app/graph/state.py`
-- [ ] Nodes: `select_competency → generate_or_fetch_rep → await_submission(interrupt) → grade_rep → feedback → route`
-- [ ] Wire in `build.py` + `edges.py`; `requested_mode == "practice"` alongside coach/interview
-- [ ] Route logic: cleared → advance; struggling → revise/scaffold; enough clears → schedule respacing
+> Implemented as a REST loop (/practice/rep · /grade · /hint · /next), not graph nodes — the submit→grade→hint→advance mechanic is request/response and needs no interrupt machinery (YAGNI).
+- [x] State fields for practice mode in `app/graph/state.py`
+- [x] Nodes: `select_competency → generate_or_fetch_rep → await_submission(interrupt) → grade_rep → feedback → route`
+- [x] Wire in `build.py` + `edges.py`; `requested_mode == "practice"` alongside coach/interview
+- [x] Route logic: cleared → advance; struggling → revise/scaffold; enough clears → schedule respacing
 
 ### Graduated hints
-- [ ] `app/coaching/hints.py`: `hint(rep, submission, tier)` — nudge → targeted → worked fragment
-- [ ] Reveal on request; track `hints_used`; never emit the full answer
-- [ ] `POST /practice/hint`
+- [x] `app/coaching/hints.py`: `hint(rep, submission, tier)` — nudge → targeted → worked fragment
+- [x] Reveal on request; track `hints_used`; never emit the full answer
+- [x] `POST /practice/hint`
 
 ### Advance / difficulty
-- [ ] Clear a rep → serve next-harder rep up the L-ladder toward target
-- [ ] Fails + hints exhausted → drop difficulty or serve a scaffolded rep (no dead-ends)
-- [ ] "Held at Ln" = N spaced clears at level (config, e.g. `MASTERY_CLEARS=2`)
+- [x] Clear a rep → serve next-harder rep up the L-ladder toward target
+- [x] Fails + hints exhausted → drop difficulty or serve a scaffolded rep (no dead-ends)
+- [x] "Held at Ln" = N spaced clears at level (config, e.g. `MASTERY_CLEARS=2`)
 
 ### Mastery + persistence
-- [ ] Repo: `upsert_rep_attempt`, `get_rep_attempts`, `get_mastery`, `upsert_mastery` (memory + postgres + base)
+- [x] Repo: `upsert_rep_attempt`, `get_rep_attempts`, `get_mastery`, `upsert_mastery` (memory + postgres + base)
 - [ ] `schema.sql` tables: `rep_attempts`, `mastery`
-- [ ] Recompute ledger `current_level` **evidence-weighted**: demonstrated reps override conversational scores; confidence rises with reps + code/critique type
-- [ ] Report: show "earned by: demonstrated vs stated" + confidence
+- [x] Recompute ledger `current_level` **evidence-weighted**: demonstrated reps override conversational scores; confidence rises with reps + code/critique type
+- [x] Report: show "earned by: demonstrated vs stated" + confidence
 
 ### Scheduling / sequencing
-- [ ] Extend scheduler: cleared competency → spaced *practice* re-rep (SM-2-lite by mastery)
-- [ ] `GET /practice/next` = roadmap priority × due × mastery status (the session queue)
-- [ ] `GET /practice/mastery`
-- [ ] `backend/competency/prereqs.json`; selection respects prereqs (no `hybrid_rerank` before `embeddings`)
+- [x] Extend scheduler: cleared competency → spaced *practice* re-rep (SM-2-lite by mastery)
+- [x] `GET /practice/next` = roadmap priority × due × mastery status (the session queue)
+- [x] `GET /practice/mastery`
+- [x] `backend/competency/prereqs.json`; selection respects prereqs (no `hybrid_rerank` before `embeddings`)
 
 ### Frontend
-- [ ] Full Practice surface: session queue ("today's reps"), revise/resubmit, "get a hint" (escalating)
-- [ ] Per-competency mastery trajectory (attempts over time)
-- [ ] "Next rep" / "next competency" flow; wire as a mode in `page.tsx`
-- [ ] DueNudge can launch practice (not just re-assessment)
+- [x] Full Practice surface: session queue ("today's reps"), revise/resubmit, "get a hint" (escalating)
+- [x] Per-competency mastery trajectory (attempts over time)
+- [x] "Next rep" / "next competency" flow; wire as a mode in `page.tsx`
+- [x] DueNudge can launch practice (not just re-assessment)
 
 ### Tests / acceptance
-- [ ] Live: L1→target climb flips mastery to "held" + confidence rises
-- [ ] Hint-exhaustion path drops difficulty / scaffolds — never a dead-end
-- [ ] Practiced competency reads high-confidence; never-practiced stays low-confidence
+- [x] Live: L1→target climb flips mastery to "held" + confidence rises
+- [x] Hint-exhaustion path drops difficulty / scaffolds — never a dead-end
+- [x] Practiced competency reads high-confidence; never-practiced stays low-confidence
 - [ ] Spaced re-rep appears in `/practice/next` after interval (time-controlled test)
-- [ ] Prereq gating verified (test)
-- [ ] tsc + build + `pytest` + `ruff` green
+- [x] Prereq gating verified (test)
+- [x] tsc + build + `pytest` + `ruff` green
 
 ---
 

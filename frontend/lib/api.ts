@@ -5,8 +5,10 @@ import type {
   FieldDomain,
   GradeResult,
   LedgerEntry,
+  MasteryItem,
   PracticeRep,
   Profile,
+  QueueItem,
   Report,
   RepGrade,
   RolePreset,
@@ -180,15 +182,48 @@ export async function fetchRep(body: {
   return r.json();
 }
 
-export async function gradeRep(repId: string, submission: string): Promise<RepGrade> {
+export async function gradeRep(
+  repId: string,
+  submission: string,
+  hintsUsed = 0
+): Promise<RepGrade> {
   const { token } = await ensureSession();
   const r = await fetch(`${HTTP_BASE}/practice/grade`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
-    body: JSON.stringify({ rep_id: repId, submission }),
+    body: JSON.stringify({ rep_id: repId, submission, hints_used: hintsUsed }),
   });
   if (!r.ok) throw new Error("Grading failed.");
   return r.json();
+}
+
+export async function fetchHint(
+  repId: string,
+  submission: string,
+  tier: number
+): Promise<string> {
+  const { token } = await ensureSession();
+  const r = await fetch(`${HTTP_BASE}/practice/hint`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ rep_id: repId, submission, tier }),
+  });
+  if (!r.ok) return "";
+  return (await r.json()).hint ?? "";
+}
+
+export async function fetchPracticeNext(): Promise<QueueItem[]> {
+  const { token } = await ensureSession();
+  const r = await fetch(`${HTTP_BASE}/practice/next`, { headers: authHeaders(token) });
+  if (!r.ok) return [];
+  return (await r.json()).queue ?? [];
+}
+
+export async function fetchMastery(): Promise<MasteryItem[]> {
+  const { token } = await ensureSession();
+  const r = await fetch(`${HTTP_BASE}/practice/mastery`, { headers: authHeaders(token) });
+  if (!r.ok) return [];
+  return (await r.json()).mastery ?? [];
 }
 
 export async function fetchMap(): Promise<FieldDomain[]> {

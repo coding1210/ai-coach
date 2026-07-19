@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchDue } from "@/lib/api";
 import type { DueItem } from "@/lib/types";
@@ -41,15 +42,23 @@ export default function DueNudge({ onRecheck }: { onRecheck: () => void }) {
         )}
         . A 60-second re-check keeps your growth honest.
       </p>
-      <button
-        onClick={onRecheck}
-        className="group mt-3 flex items-center gap-1.5 text-xs font-medium text-accent transition-colors hover:text-hi"
-      >
-        Re-check now
-        <span className="transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
-          →
-        </span>
-      </button>
+      <div className="mt-3 flex items-center gap-4">
+        <button
+          onClick={onRecheck}
+          className="group flex items-center gap-1.5 text-xs font-medium text-accent transition-colors hover:text-hi"
+        >
+          Re-check now
+          <span className="transition-transform duration-200 ease-out-quart group-hover:translate-x-0.5">
+            →
+          </span>
+        </button>
+        <Link
+          href="/practice"
+          className="text-xs font-medium text-dim transition-colors hover:text-hi"
+        >
+          Practice it instead
+        </Link>
+      </div>
     </div>
   );
 }

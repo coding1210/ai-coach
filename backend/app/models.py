@@ -110,6 +110,13 @@ class PracticeRepRequest(BaseModel):
 class PracticeGradeRequest(BaseModel):
     rep_id: str
     submission: str
+    hints_used: int = 0
+
+
+class PracticeHintRequest(BaseModel):
+    rep_id: str
+    submission: str = ""
+    tier: int = 1
 
 
 class RepAttempt(BaseModel):
