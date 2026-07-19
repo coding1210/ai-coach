@@ -59,6 +59,11 @@ class Repository(ABC):
     async def user_for_token(self, token: str) -> str | None:
         """Resolve a bearer token to its user_id, or None if unknown."""
 
+    async def latest_thread(self, user_id: str) -> str | None:
+        """The user's most recent session thread_id (for 'restore & resume').
+        Default: unknown. Backends that track sessions override this."""
+        return None
+
     # ── auxiliary records (outcomes / shares / review schedule) ──
     # Concrete, lightweight storage shared by every backend. These power the
     # program features (spaced re-assessment, sharing, outcome tracking) without

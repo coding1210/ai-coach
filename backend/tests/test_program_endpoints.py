@@ -72,6 +72,25 @@ def test_share_creates_public_snapshot(client):
     assert "report" in snap.json()
 
 
+def test_map_is_public_and_lists_domains(client):
+    r = client.get("/map")
+    assert r.status_code == 200
+    domains = r.json()["domains"]
+    assert any(d["id"] == "rag" for d in domains)
+    assert all(d["competencies"] for d in domains)
+
+
+def test_account_recovery_code_reflects_saved_work(client):
+    h = _auth(client)
+    # Fresh session: nothing saved yet.
+    acct = client.get("/account", headers=h).json()
+    assert acct["has_report"] is False and acct["competencies_tracked"] == 0
+    # After a diagnosis, the same code unlocks saved work.
+    client.post("/diagnose/code", json={"source": "paste", "content": _CODE}, headers=h)
+    acct2 = client.get("/account", headers=h).json()
+    assert acct2["has_report"] is True and acct2["competencies_tracked"] >= 1
+
+
 def test_outcome_tracking_roundtrip(client):
     h = _auth(client)
     client.post("/outcome", json={"status": "hired", "role": "Gen AI Engineer", "notes": "offer!"}, headers=h)

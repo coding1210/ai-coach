@@ -50,6 +50,74 @@ function ShareButton() {
   );
 }
 
+function SaveProgress() {
+  const [code, setCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  function reveal() {
+    try {
+      const s = JSON.parse(localStorage.getItem("coach_session") || "{}");
+      if (s.token) {
+        setCode(s.token);
+        navigator.clipboard?.writeText(s.token).then(
+          () => setCopied(true),
+          () => {}
+        );
+      }
+    } catch {
+      /* no session yet */
+    }
+  }
+  return (
+    <div className="rounded-xl border border-edge/60 bg-ink/40 p-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent">
+        Your progress is saved
+      </p>
+      <p className="mt-1.5 text-xs leading-relaxed text-dim">
+        Keep this recovery code to pick up on another device or after clearing your
+        browser. It&apos;s the key to your baseline, plan, and growth.
+      </p>
+      {code ? (
+        <div className="mt-2.5">
+          <code className="block break-all rounded-md border border-edge bg-black/40 px-2.5 py-1.5 font-mono text-[11px] text-hi">
+            {code}
+          </code>
+          <p className="mt-1 text-[11px] text-accent">
+            {copied ? "Copied to clipboard — store it somewhere safe." : "Copy and store it somewhere safe."}
+          </p>
+        </div>
+      ) : (
+        <button
+          onClick={reveal}
+          className="mt-2.5 rounded-md border border-edge px-3 py-1.5 text-xs font-medium text-mid transition-colors hover:border-accent/50 hover:text-accent"
+        >
+          Reveal my recovery code
+        </button>
+      )}
+    </div>
+  );
+}
+
+function WinsSection({ growth }: { growth: NonNullable<Report["growth"]> }) {
+  return (
+    <section>
+      <SectionLabel tone="accent">What you&apos;ve gained since last time</SectionLabel>
+      <ul className="space-y-2">
+        {growth.improved.map((g) => (
+          <li
+            key={g.competency_name}
+            className="flex items-center justify-between gap-2 rounded-md border border-accent/30 bg-accent/[0.06] px-3 py-2"
+          >
+            <span className="text-sm font-medium text-hi">{g.competency_name}</span>
+            <span className="nums whitespace-nowrap font-mono text-[11px] text-accent">
+              L{g.from} → L{g.to} ↑
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function LevelBar({ current, target }: { current: number; target: number }) {
   return (
     <div className="mt-2 h-1.5 w-full overflow-visible rounded-full bg-edge">
@@ -301,6 +369,10 @@ export default function ReportPanel({
         </div>
       )}
 
+      {report.growth && report.growth.improved_count > 0 && (
+        <WinsSection growth={report.growth} />
+      )}
+
       <div className="flex justify-center rounded-xl border border-edge/60 bg-ink/40 p-4">
         <RadarChart radar={report.radar} />
       </div>
@@ -353,6 +425,8 @@ export default function ReportPanel({
           </ul>
         </section>
       )}
+
+      {shareable && !report.interview && <SaveProgress />}
     </div>
   );
 }

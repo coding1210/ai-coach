@@ -74,3 +74,10 @@ class MemoryRepository(Repository):
 
     async def user_for_token(self, token) -> str | None:
         return self._tokens.get(token)
+
+    async def latest_thread(self, user_id) -> str | None:
+        # Dicts preserve insertion order → the last-added session is the most recent.
+        for sess in reversed(self._sessions.values()):
+            if sess.get("user_id") == user_id:
+                return sess.get("thread_id")
+        return None

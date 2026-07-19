@@ -1,6 +1,8 @@
 import type {
+  Account,
   DueItem,
   Exercise,
+  FieldDomain,
   GradeResult,
   LedgerEntry,
   Profile,
@@ -132,6 +134,36 @@ export async function fetchShared(
   const r = await fetch(`${HTTP_BASE}/shared/${token}`);
   if (!r.ok) return null;
   return r.json();
+}
+
+export async function fetchAccount(): Promise<Account | null> {
+  const { token } = await ensureSession();
+  const r = await fetch(`${HTTP_BASE}/account`, { headers: authHeaders(token) });
+  if (!r.ok) return null;
+  return r.json();
+}
+
+/** Restore a session from a recovery code (a bearer token). Returns the account
+ *  it unlocks, or null if the code is invalid. On success, caches the session. */
+export async function restoreSession(code: string): Promise<Account | null> {
+  const token = code.trim();
+  if (!token) return null;
+  const r = await fetch(`${HTTP_BASE}/account`, { headers: authHeaders(token) });
+  if (!r.ok) return null;
+  const acct = (await r.json()) as Account;
+  const session: Session = { token, user_id: acct.user_id };
+  _session = session;
+  if (typeof window !== "undefined") {
+    localStorage.setItem("coach_session", JSON.stringify(session));
+    if (acct.latest_thread) localStorage.setItem("coach_active", acct.latest_thread);
+  }
+  return acct;
+}
+
+export async function fetchMap(): Promise<FieldDomain[]> {
+  const r = await fetch(`${HTTP_BASE}/map`);
+  if (!r.ok) return [];
+  return (await r.json()).domains ?? [];
 }
 
 export async function recordOutcome(body: {
