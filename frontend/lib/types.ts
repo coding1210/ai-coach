@@ -163,6 +163,28 @@ export interface Account {
   latest_thread: string | null;
 }
 
+export interface PracticeRep {
+  id: string;
+  competency_id: string;
+  type: "code" | "design" | "critique" | "explain";
+  target_level: number;
+  difficulty: number;
+  prompt: string;
+  language?: string | null;
+  given_artifact?: string | null;
+  audience?: string | null;
+}
+
+export interface RepGrade {
+  competency_id: string;
+  level: number;
+  passed: boolean;
+  confidence: number;
+  target_level: number;
+  evidence?: string;
+  criteria_results?: { id: string; met: boolean; note?: string }[];
+}
+
 export interface LedgerEntry {
   competency_id: string;
   baseline_level: number | null;

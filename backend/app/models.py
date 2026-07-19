@@ -100,6 +100,45 @@ class OutcomeIn(BaseModel):
     notes: str = ""
 
 
+# ─── Practice loop (development coach) ───────────────────────────
+class PracticeRepRequest(BaseModel):
+    competency_id: str | None = None  # omitted → coach picks the top gap
+    type: str | None = None           # code | design | critique | explain
+    target_level: int | None = None
+
+
+class PracticeGradeRequest(BaseModel):
+    rep_id: str
+    submission: str
+
+
+class RepAttempt(BaseModel):
+    """One graded practice attempt — the evidence trail (persisted in Phase 2)."""
+
+    competency_id: str
+    rep_id: str
+    type: str
+    target_level: int
+    level_awarded: int
+    passed: bool
+    confidence: float
+    hints_used: int = 0
+    attempt_no: int = 1
+    created_at: datetime | None = None
+
+
+class Mastery(BaseModel):
+    """Per user×competency practice state (persisted in Phase 2)."""
+
+    competency_id: str
+    level: int | None = None
+    confidence: float = 0.0
+    reps_cleared_at_level: int = 0
+    status: str = "unseen"  # unseen | practicing | held | needs_refresh
+    last_practiced_at: datetime | None = None
+    next_rep_due_at: datetime | None = None
+
+
 class ShareOut(BaseModel):
     token: str
     url: str

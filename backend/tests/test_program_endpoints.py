@@ -91,6 +91,36 @@ def test_account_recovery_code_reflects_saved_work(client):
     assert acct2["has_report"] is True and acct2["competencies_tracked"] >= 1
 
 
+def test_practice_rep_and_grade_roundtrip(client):
+    h = _auth(client)
+    # Explicit competency → generate a rep (rubric withheld), then grade it.
+    r = client.post("/practice/rep", json={"competency_id": "rag.when_not"}, headers=h)
+    assert r.status_code == 200
+    rep = r.json()
+    assert rep["competency_id"] == "rag.when_not" and rep["prompt"]
+    assert "rubric" not in rep and "checks" not in rep  # server-held only
+    g = client.post(
+        "/practice/grade",
+        json={"rep_id": rep["id"], "submission": "Skip RAG when the corpus fits in context or the "
+              "task needs global reasoning; prompt directly or fine-tune instead."},
+        headers=h,
+    )
+    assert g.status_code == 200
+    body = g.json()
+    assert 1 <= body["level"] <= 5 and isinstance(body["passed"], bool)
+
+
+def test_practice_rep_needs_a_target(client):
+    h = _auth(client)
+    # No competency and no prior report → can't pick a gap.
+    assert client.post("/practice/rep", json={}, headers=h).status_code == 400
+
+
+def test_practice_grade_unknown_rep_404(client):
+    h = _auth(client)
+    assert client.post("/practice/grade", json={"rep_id": "rep_nope", "submission": "x"}, headers=h).status_code == 404
+
+
 def test_outcome_tracking_roundtrip(client):
     h = _auth(client)
     client.post("/outcome", json={"status": "hired", "role": "Gen AI Engineer", "notes": "offer!"}, headers=h)

@@ -93,5 +93,17 @@ class Repository(ABC):
     async def get_next_reviews(self, user_id: str) -> dict[str, str]:
         return dict(self._aux("reviews").get(user_id, {}))
 
+    # ── practice reps (generated tasks; rubric held server-side) ──
+    async def save_rep(self, rep_id: str, competency_id: str, rep_type: str, level: int, data: dict) -> None:
+        self._aux("reps")[rep_id] = data
+        self._aux("rep_by_key")[f"{competency_id}:{rep_type}:{level}"] = rep_id
+
+    async def get_rep(self, rep_id: str) -> dict | None:
+        return self._aux("reps").get(rep_id)
+
+    async def get_cached_rep(self, competency_id: str, rep_type: str, level: int) -> dict | None:
+        rid = self._aux("rep_by_key").get(f"{competency_id}:{rep_type}:{level}")
+        return self._aux("reps").get(rid) if rid else None
+
     async def close(self) -> None:  # optional lifecycle hook
         return None

@@ -5,8 +5,10 @@ import type {
   FieldDomain,
   GradeResult,
   LedgerEntry,
+  PracticeRep,
   Profile,
   Report,
+  RepGrade,
   RolePreset,
 } from "./types";
 
@@ -158,6 +160,35 @@ export async function restoreSession(code: string): Promise<Account | null> {
     if (acct.latest_thread) localStorage.setItem("coach_active", acct.latest_thread);
   }
   return acct;
+}
+
+export async function fetchRep(body: {
+  competency_id?: string;
+  type?: string;
+  target_level?: number;
+}): Promise<PracticeRep> {
+  const { token } = await ensureSession();
+  const r = await fetch(`${HTTP_BASE}/practice/rep`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const detail = await r.json().catch(() => ({}));
+    throw new Error(detail.detail || "Couldn't start a rep.");
+  }
+  return r.json();
+}
+
+export async function gradeRep(repId: string, submission: string): Promise<RepGrade> {
+  const { token } = await ensureSession();
+  const r = await fetch(`${HTTP_BASE}/practice/grade`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ rep_id: repId, submission }),
+  });
+  if (!r.ok) throw new Error("Grading failed.");
+  return r.json();
 }
 
 export async function fetchMap(): Promise<FieldDomain[]> {

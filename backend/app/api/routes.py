@@ -21,6 +21,8 @@ from app.models import (
     GradeRequest,
     GradeResponse,
     OutcomeIn,
+    PracticeGradeRequest,
+    PracticeRepRequest,
     ShareOut,
 )
 
@@ -234,6 +236,62 @@ async def diagnose_from_code(
         await repo.set_next_review(user_id, cid, when)
 
     return report
+
+
+@router.post("/practice/rep")
+async def practice_rep(
+    body: PracticeRepRequest, request: Request, user_id: str = Depends(current_user)
+) -> dict:
+    """Generate (or reuse) a calibrated practice rep. Rubric is withheld from the
+    response — grade via /practice/grade with the returned rep_id."""
+    from app.coaching.reps import Rep, default_rep_type, generate_rep
+    from app.competency.loader import get_competency_map
+    from app.competency.selection import target_level_for
+
+    cmap = get_competency_map()
+    repo = request.app.state.repo
+
+    competency_id = body.competency_id
+    target_level = body.target_level
+    if not competency_id:
+        report = await repo.get_latest_report(user_id)
+        weaknesses = (report or {}).get("weaknesses") or []
+        if not weaknesses:
+            raise HTTPException(status_code=400, detail="Pick a competency to practise, or run a diagnosis first.")
+        competency_id = weaknesses[0]["competency_id"]
+        target_level = target_level or weaknesses[0].get("target_level")
+
+    try:
+        cmap.competency(competency_id)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail="Unknown competency.") from e
+
+    rep_type = body.type or default_rep_type(competency_id)
+    if target_level is None:
+        target_level = target_level_for(cmap.domain_of(competency_id).weight)
+    target_level = max(1, min(5, int(target_level)))
+
+    cached = await repo.get_cached_rep(competency_id, rep_type, target_level)
+    if cached:
+        rep = Rep.model_validate(cached)
+    else:
+        rep = await generate_rep(competency_id, target_level, rep_type)
+        await repo.save_rep(rep.id, competency_id, rep_type, target_level, rep.model_dump())
+    return rep.client_view()
+
+
+@router.post("/practice/grade")
+async def practice_grade(
+    body: PracticeGradeRequest, request: Request, user_id: str = Depends(current_user)
+) -> dict:
+    """Grade a practice submission against the rep's (server-held) rubric."""
+    from app.coaching.reps import Rep, grade_rep
+
+    data = await request.app.state.repo.get_rep(body.rep_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Rep not found — generate a new one.")
+    rep = Rep.model_validate(data)
+    return await grade_rep(rep, body.submission)
 
 
 @router.post("/outcome")

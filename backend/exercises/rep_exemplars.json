@@ -1,0 +1,40 @@
+{
+  "description": "Few-shot exemplars for non-code rep generation. One or two per type, hand-written to set the quality bar: concrete, reasoning-heavy, unambiguous, with a gradable rubric. Injected into the generation prompt as an example — never served directly.",
+  "exemplars": {
+    "design": [
+      {
+        "prompt": "A legal-tech team wants a chatbot over 50k contracts. Retrieval quality is poor: users get plausible-sounding but wrong clauses. Design your fix. Cover chunking, retrieval strategy, and how you'd prove it improved — and name the trade-offs you're accepting.",
+        "criteria": [
+          {"id": "diagnose", "description": "Diagnoses likely causes (chunking, embedding fit, no re-rank) before jumping to a fix", "weight": 2, "level_signal": "judgement"},
+          {"id": "strategy", "description": "Proposes a concrete retrieval strategy (hybrid + re-rank) with reasons", "weight": 2, "level_signal": "depth"},
+          {"id": "measure", "description": "Specifies how to prove improvement (labeled set, recall@k)", "weight": 2, "level_signal": "rigor"},
+          {"id": "tradeoffs", "description": "Names trade-offs accepted (latency, cost, complexity)", "weight": 1, "level_signal": "maturity"}
+        ]
+      }
+    ],
+    "critique": [
+      {
+        "prompt": "Review this agent loop. Find every way it can misbehave in production, explain why each matters, and describe the fix.",
+        "given_artifact": "def run(task, tools, llm):\n    while True:\n        step = llm(task)\n        result = tools[step['tool']](**step['args'])\n        task += str(result)",
+        "criteria": [
+          {"id": "unbounded", "description": "Catches the unbounded loop (no step cap / termination)", "weight": 2, "level_signal": "correctness"},
+          {"id": "trust", "description": "Catches blind trust of tool name/args (KeyError, injection)", "weight": 2, "level_signal": "safety"},
+          {"id": "errors", "description": "Catches missing tool-error handling", "weight": 1, "level_signal": "robustness"},
+          {"id": "fixes", "description": "Gives concrete fixes, not just problem-spotting", "weight": 2, "level_signal": "application"}
+        ]
+      }
+    ],
+    "explain": [
+      {
+        "prompt": "Explain what an embedding is to a backend engineer who's never used one. Cover what it represents, why 'similar meaning = close vectors' matters for search, and one thing beginners get wrong.",
+        "audience": "a backend engineer new to embeddings",
+        "criteria": [
+          {"id": "core", "description": "Correctly explains embeddings as vectors capturing meaning", "weight": 2, "level_signal": "accuracy"},
+          {"id": "why", "description": "Connects vector similarity to retrieval/search usefully", "weight": 2, "level_signal": "understanding"},
+          {"id": "misconception", "description": "Surfaces a real beginner misconception (e.g. keyword != semantic)", "weight": 1, "level_signal": "depth"},
+          {"id": "precise", "description": "Precise, no hand-waving or jargon left undefined", "weight": 1, "level_signal": "clarity"}
+        ]
+      }
+    ]
+  }
+}

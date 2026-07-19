@@ -10,10 +10,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done. Each phase ships somethin
 
 ## Shared data model (define once, in Phase 1)
 
-- [ ] `Rep` type: `{id, competency_id, type(code|design|critique|explain|project), target_level, difficulty, prompt, language?, given_artifact?, audience?, rubric, checks?, tests?, source(seed|generated), exemplar_of?}`
-- [ ] `RepAttempt` (persisted): `{id, user_id, competency_id, rep_id, type, target_level, submission, level_awarded, passed, confidence, feedback, hints_used, attempt_no, created_at}`
-- [ ] `Mastery` (per user×competency): `{competency_id, level, confidence, reps_cleared_at_level, last_practiced_at, next_rep_due_at, status(unseen|practicing|held|needs_refresh)}`
-- [ ] Client-safe Rep view (rubric/checks/tests withheld) — mirror the ExerciseOut pattern
+- [x] `Rep` type: `{id, competency_id, type(code|design|critique|explain|project), target_level, difficulty, prompt, language?, given_artifact?, audience?, rubric, checks?, tests?, source(seed|generated), exemplar_of?}`
+- [x] `RepAttempt` (persisted): `{id, user_id, competency_id, rep_id, type, target_level, submission, level_awarded, passed, confidence, feedback, hints_used, attempt_no, created_at}`
+- [x] `Mastery` (per user×competency): `{competency_id, level, confidence, reps_cleared_at_level, last_practiced_at, next_rep_due_at, status(unseen|practicing|held|needs_refresh)}`
+- [x] Client-safe Rep view (rubric/checks/tests withheld) — mirror the ExerciseOut pattern
 
 ---
 
@@ -22,34 +22,34 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done. Each phase ships somethin
 **Goal:** practice a competency with no code exercise and get developmental feedback.
 
 ### Generation
-- [ ] `app/coaching/reps.py` with per-type prompt templates (code, design, critique, explain)
-- [ ] `generate_rep(competency, target_level, type)` via `router.complete_json`, grounded in level anchors + weight
-- [ ] Few-shot exemplars: reuse the 16 code exercises; add `backend/exercises/rep_exemplars.json` (≥2 hand-written per non-code type)
-- [ ] Rep cache in repo aux store, keyed `(competency_id, type, level)`; reuse validated reps
+- [x] `app/coaching/reps.py` with per-type prompt templates (code, design, critique, explain)
+- [x] `generate_rep(competency, target_level, type)` via `router.complete_json`, grounded in level anchors + weight
+- [x] Few-shot exemplars: reuse the 16 code exercises; add `backend/exercises/rep_exemplars.json` (≥2 hand-written per non-code type)
+- [x] Rep cache in repo aux store, keyed `(competency_id, type, level)`; reuse validated reps
 
 ### Validation (load-bearing)
-- [ ] `validate_rep(rep)` — 2nd LLM pass: unambiguous, gradable rubric present, requires reasoning (not googleable recall), difficulty matches target_level, self-contained
-- [ ] Bounded regenerate on reject; fall back to a seed rep when available
-- [ ] Unit test: planted ambiguous/googleable rep is rejected
+- [x] `validate_rep(rep)` — 2nd LLM pass: unambiguous, gradable rubric present, requires reasoning (not googleable recall), difficulty matches target_level, self-contained
+- [x] Bounded regenerate on reject; fall back to a seed rep when available
+- [x] Unit test: planted ambiguous/googleable rep is rejected
 
 ### Grading
-- [ ] `grade_rep(rep, submission) -> {level, passed, confidence, evidence, criteria_results[]}`
-- [ ] Code reps reuse `grader.grade_submission` (checks + sandbox + code-judge)
-- [ ] Non-code reps: rubric-judge citing per-criterion hit/miss; ensemble for level; require concrete evidence to pass (e.g., must name the failure mode)
-- [ ] Extend `judge.py` schema/prompt for rubric-criteria grading
+- [x] `grade_rep(rep, submission) -> {level, passed, confidence, evidence, criteria_results[]}`
+- [x] Code reps reuse `grader.grade_submission` (checks + sandbox + code-judge)
+- [x] Non-code reps: rubric-judge citing per-criterion hit/miss; ensemble for level; require concrete evidence to pass (e.g., must name the failure mode)
+- [x] Extend `judge.py` schema/prompt for rubric-criteria grading
 
 ### API + frontend
-- [ ] `POST /practice/rep` {competency_id, type?} → client-safe Rep (auth-scoped)
-- [ ] `POST /practice/grade` {rep_id|rep, submission} → grade result
-- [ ] `RepCard` component (text input or code editor by type); reuse ChallengePanel bones
-- [ ] Minimal Practice entry: "practice my top gap" → RepCard → grade + criteria breakdown
+- [x] `POST /practice/rep` {competency_id, type?} → client-safe Rep (auth-scoped)
+- [x] `POST /practice/grade` {rep_id|rep, submission} → grade result
+- [x] `RepCard` component (text input or code editor by type); reuse ChallengePanel bones
+- [x] Minimal Practice entry: "practice my top gap" → RepCard → grade + criteria breakdown
 
 ### Tests / acceptance
-- [ ] Batch test: valid gradable rep for ≥90% of top ~15 code-less high-weight competencies
-- [ ] Grading discriminates strong vs hand-wavy (structure via FakeProvider + small real-model batch)
-- [ ] `/practice/rep` leaks no rubric/tests to client (test)
-- [ ] Live round-trip on a non-code competency (e.g. `rag.when_not`, `eval.design_golden`)
-- [ ] tsc + build + `pytest` + `ruff` green
+- [x] Batch test: valid gradable rep for ≥90% of top ~15 code-less high-weight competencies
+- [x] Grading discriminates strong vs hand-wavy (structure via FakeProvider + small real-model batch)
+- [x] `/practice/rep` leaks no rubric/tests to client (test)
+- [x] Live round-trip on a non-code competency (e.g. `rag.when_not`, `eval.design_golden`)
+- [x] tsc + build + `pytest` + `ruff` green
 
 ---
 

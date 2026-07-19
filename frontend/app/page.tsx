@@ -93,6 +93,12 @@ export default function Home() {
         </div>
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
           <Link
+            href="/practice"
+            className="group flex items-center gap-2 rounded-md border border-edge px-3.5 py-2 text-xs font-medium text-mid transition-[transform,border-color,color] duration-200 ease-out-quart hover:border-edge-strong hover:text-hi active:scale-[0.98]"
+          >
+            Practice
+          </Link>
+          <Link
             href="/map"
             className="group flex items-center gap-2 rounded-md border border-edge px-3.5 py-2 text-xs font-medium text-mid transition-[transform,border-color,color] duration-200 ease-out-quart hover:border-edge-strong hover:text-hi active:scale-[0.98]"
           >
