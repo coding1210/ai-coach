@@ -123,7 +123,7 @@ function LevelBar({ current, target }: { current: number; target: number }) {
     <div className="mt-2 h-1.5 w-full overflow-visible rounded-full bg-edge">
       <div className="relative h-full">
         <div
-          className="absolute h-full rounded-full bg-accent"
+          className="bar-fill absolute h-full rounded-full bg-accent"
           style={{ width: `${(current / 5) * 100}%` }}
         />
         <div
@@ -278,7 +278,7 @@ function BenchmarkBar({ b }: { b: import("@/lib/types").BenchmarkDomain }) {
       </div>
       <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-edge">
         <div
-          className="h-full rounded-full bg-accent/70"
+          className="bar-fill h-full rounded-full bg-accent/70"
           style={{ width: `${b.percentile}%` }}
         />
       </div>
@@ -320,7 +320,7 @@ export default function ReportPanel({
   const early = !!report.early_stage && !report.interview;
   const firstStep = report.roadmap?.milestones?.[0]?.competency_name;
   return (
-    <div className="space-y-7">
+    <div className="report-reveal space-y-7">
       <div>
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-faint">
@@ -407,7 +407,7 @@ export default function ReportPanel({
           <SectionLabel tone="accent">
             Your growth path · {report.roadmap.horizon}
           </SectionLabel>
-          <ul className="space-y-2">
+          <ul className="stagger-list space-y-2">
             {report.roadmap.milestones.map((m) => (
               <MilestoneCard key={m.competency_id} m={m} />
             ))}
