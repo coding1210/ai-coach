@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 from collections import defaultdict
 
+from app.coaching.benchmark import benchmark_report
 from app.coaching.roadmap import build_roadmap, enrich_roadmap
 from app.competency.loader import get_competency_map
 from app.competency.selection import target_for
@@ -160,6 +161,7 @@ async def report(state: CoachState) -> dict:
 
     built = build_report(merged, cmap, prior_levels=prior, jd_targets=state.get("jd_targets") or {})
     built["role_title"] = state.get("role_title", "")
+    built["benchmark"] = benchmark_report(built["radar"])
     built["roadmap"] = build_roadmap(built, cmap)
 
     profile = state.get("profile") or {}

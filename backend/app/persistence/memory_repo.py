@@ -7,6 +7,8 @@ same as the Postgres implementation.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from app.models import AssessmentEvent, LedgerEntry
 from app.persistence.repository import Repository
 
@@ -58,6 +60,7 @@ class MemoryRepository(Repository):
             baseline_level=baseline,
             current_level=current_level,
             target_level=target_level,
+            updated_at=datetime.now(timezone.utc),
         )
 
     async def get_progress(self, user_id) -> list[LedgerEntry]:

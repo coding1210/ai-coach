@@ -29,6 +29,10 @@ class Exercise(BaseModel):
     prompt: str
     rubric: str
     checks: list[Check]
+    # Optional hidden test harness (Python). Appended after the submission and
+    # run in the sandbox; must print SANDBOX_PASS on success. Withheld from the
+    # client (ExerciseOut) so it can't be gamed.
+    tests: str | None = None
 
 
 class ExerciseBank(BaseModel):

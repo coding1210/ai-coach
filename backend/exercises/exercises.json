@@ -13,7 +13,8 @@
         { "id": "retry", "description": "Retries with backoff", "kind": "present", "pattern": "retr(y|ies)|backoff|tenacity|attempt", "weight": 2 },
         { "id": "timeout", "description": "Applies a timeout", "kind": "present", "pattern": "timeout|wait_for", "weight": 1 },
         { "id": "isolates_failures", "description": "Handles per-call errors", "kind": "present", "pattern": "try|except|return_exceptions", "weight": 1 }
-      ]
+      ],
+      "tests": "import asyncio\nasync def call_llm(p):\n    await asyncio.sleep(0)\n    if p == 'boom':\n        raise RuntimeError('transient')\n    return p.upper()\nprompts = ['a', 'b', 'boom', 'c']\nresults = asyncio.run(run_batch(prompts, call_llm))\nassert results is not None and len(results) == len(prompts), 'must return one result per prompt'\nassert any('A' == (r if isinstance(r, str) else '') for r in results), 'successful calls should resolve'\nprint('SANDBOX_PASS')"
     },
     {
       "competency_id": "llm.structured_output",
@@ -39,7 +40,8 @@
         { "id": "overlap", "description": "Uses overlap", "kind": "present", "pattern": "overlap", "weight": 2 },
         { "id": "metadata", "description": "Attaches metadata", "kind": "present", "pattern": "metadata|source|doc_id|section|\"id\"|'id'", "weight": 1 },
         { "id": "sizing", "description": "Reasons about chunk size", "kind": "present", "pattern": "chunk_size|max_tokens|size|len\\(", "weight": 1 }
-      ]
+      ],
+      "tests": "doc = 'Section 1\\n\\n' + ('a ' * 400) + '\\n\\nSection 2\\n\\n' + ('b ' * 400)\nchunks = chunk_document(doc)\nassert isinstance(chunks, list) and len(chunks) >= 2, 'should produce multiple chunks'\ntexts = [c if isinstance(c, str) else (c.get('text') or c.get('content') or '') for c in chunks]\nassert all(texts), 'each chunk needs text'\nassert any(isinstance(c, dict) for c in chunks), 'chunks should carry metadata'\nprint('SANDBOX_PASS')"
     },
     {
       "competency_id": "agents.failure_modes",
