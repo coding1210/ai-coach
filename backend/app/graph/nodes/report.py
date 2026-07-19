@@ -76,6 +76,11 @@ def build_report(
 
     priorities = [w["competency_id"] for w in weaknesses[:3]]
 
+    # Early-stage: someone at the very start of the journey. We reframe the report
+    # for them (encouragement over percentiles) rather than showing a wall of red.
+    mean_level = sum(e["current_level"] for e in scored) / len(scored) if scored else 0
+    early_stage = bool(scored) and mean_level <= 2.2
+
     improved = [e for e in scored if e.get("delta") and e["delta"] > 0]
     growth = {
         "improved_count": len(improved),
@@ -92,6 +97,7 @@ def build_report(
         "radar": radar,
         "priorities": priorities,
         "competencies_assessed": len(scored),
+        "early_stage": early_stage,
         "growth": growth,
     }
 
@@ -161,6 +167,7 @@ async def report(state: CoachState) -> dict:
 
     built = build_report(merged, cmap, prior_levels=prior, jd_targets=state.get("jd_targets") or {})
     built["role_title"] = state.get("role_title", "")
+    built["early_stage"] = built.get("early_stage") or bool(state.get("beginner"))
     built["benchmark"] = benchmark_report(built["radar"])
     built["roadmap"] = build_roadmap(built, cmap)
 
