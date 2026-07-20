@@ -64,6 +64,54 @@ body::before {
   transform-origin: center;
 }
 
+/* ── Report reveal ─────────────────────────────────────────────
+   One-time entrance for the evaluation. Every animation resolves to its
+   final state, so the reduced-motion guard below collapses them cleanly. */
+
+/* Stagger the report's top-level sections so the eye moves through it in order. */
+.report-reveal > * {
+  animation: rise-in 340ms var(--ease-out-quart) both;
+}
+.report-reveal > *:nth-child(2) { animation-delay: 55ms; }
+.report-reveal > *:nth-child(3) { animation-delay: 110ms; }
+.report-reveal > *:nth-child(4) { animation-delay: 165ms; }
+.report-reveal > *:nth-child(5) { animation-delay: 220ms; }
+.report-reveal > *:nth-child(6) { animation-delay: 275ms; }
+.report-reveal > *:nth-child(7) { animation-delay: 330ms; }
+.report-reveal > *:nth-child(8) { animation-delay: 385ms; }
+
+/* Cascade a list's items (e.g. growth-path milestones). */
+.stagger-list > * {
+  animation: rise-in 300ms var(--ease-out-quart) both;
+}
+.stagger-list > *:nth-child(2) { animation-delay: 45ms; }
+.stagger-list > *:nth-child(3) { animation-delay: 90ms; }
+.stagger-list > *:nth-child(4) { animation-delay: 135ms; }
+.stagger-list > *:nth-child(5) { animation-delay: 180ms; }
+
+/* Bars fill from empty to their value — clip-path stays on the GPU and,
+   unlike animating width, doesn't distort the rounded ends. */
+@keyframes bar-fill {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+.bar-fill {
+  animation: bar-fill 640ms var(--ease-out-quart) both;
+  animation-delay: 120ms;
+}
+
+/* Radar's current-proficiency shape grows in from the centre. */
+@keyframes radar-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+.radar-current {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: radar-in 520ms var(--ease-out-quart) both;
+  animation-delay: 200ms;
+}
+
 /* Accessible focus ring in the accent hue. */
 :focus-visible {
   outline: 2px solid rgba(200, 241, 105, 0.6);
