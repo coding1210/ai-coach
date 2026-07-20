@@ -66,11 +66,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="AI Coach — Gen AI Engineer", version="0.1.0", lifespan=lifespan)
 
 # CORS for the Next.js frontend. Local dev by exact origin; tunneled demo links
-# (Cloudflare / ngrok) by regex so a shared URL's REST calls aren't blocked.
+# (Cloudflare / ngrok) by regex; the deployed frontend origin(s) come from the
+# ALLOWED_ORIGINS env var (comma-separated) so prod needs no code change.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_origin_regex=r"https://.*\.(trycloudflare\.com|ngrok-free\.app|ngrok\.io|ngrok\.app)",
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"] + get_settings().origins_list,
+    allow_origin_regex=r"https://.*\.(trycloudflare\.com|ngrok-free\.app|ngrok\.io|ngrok\.app|vercel\.app)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

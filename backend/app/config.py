@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     coverage_threshold: float = 0.7
     log_level: str = "INFO"
 
+    # Production frontend origin(s), comma-separated (e.g. "https://coach.vercel.app").
+    # Added to the CORS allow-list alongside localhost + tunnel links.
+    allowed_origins: str = ""
+
+    @property
+    def origins_list(self) -> list[str]:
+        return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
     # ─── Judging ─────────────────────────────────────────────────
     # Ensemble judging: run N independent judges concurrently and aggregate,
     # so a single noisy read can't swing the score. 1 = legacy single-judge.

@@ -1,0 +1,14 @@
+# Keep the image small and — critically — keep secrets out of it.
+**/.env
+**/.env.*
+**/.venv
+**/node_modules
+**/.next
+**/__pycache__
+**/*.pyc
+.git
+.github
+**/.pytest_cache
+**/.ruff_cache
+calibration/
+*.log
