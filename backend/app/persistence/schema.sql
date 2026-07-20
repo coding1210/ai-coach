@@ -50,6 +50,55 @@ CREATE TABLE IF NOT EXISTS auth_token (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ── Practice loop (development coach) ───────────────────────────
+-- Generated reps (cache) + their quality telemetry, keyed by rep id.
+CREATE TABLE IF NOT EXISTS practice_rep (
+    rep_id         TEXT PRIMARY KEY,
+    competency_id  TEXT NOT NULL,
+    rep_type       TEXT NOT NULL,
+    level          INT NOT NULL,
+    data           JSONB NOT NULL,
+    attempts       INT NOT NULL DEFAULT 0,
+    passes         INT NOT NULL DEFAULT 0,
+    flags          INT NOT NULL DEFAULT 0,
+    hint_exhausted INT NOT NULL DEFAULT 0,
+    demoted        BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_rep_key ON practice_rep(competency_id, rep_type, level);
+
+-- One row per graded practice attempt — the evidence trail.
+CREATE TABLE IF NOT EXISTS rep_attempt (
+    id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id       TEXT NOT NULL,
+    competency_id TEXT NOT NULL,
+    rep_id        TEXT,
+    type          TEXT,
+    target_level  INT,
+    level_awarded INT,
+    passed        BOOLEAN,
+    confidence    REAL,
+    hints_used    INT NOT NULL DEFAULT 0,
+    attempt_no    INT NOT NULL DEFAULT 1,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_attempt_user ON rep_attempt(user_id, competency_id);
+
+-- Per user × competency mastery state.
+CREATE TABLE IF NOT EXISTS mastery (
+    user_id                TEXT NOT NULL,
+    competency_id          TEXT NOT NULL,
+    level                  INT NOT NULL DEFAULT 0,
+    confidence             REAL NOT NULL DEFAULT 0,
+    reps_cleared_at_target INT NOT NULL DEFAULT 0,
+    status                 TEXT NOT NULL DEFAULT 'unseen',
+    -- ISO strings (not TIMESTAMPTZ) so values round-trip identically to the
+    -- in-memory repo, which the practice scheduler compares as strings.
+    last_practiced_at      TEXT,
+    next_rep_due_at        TEXT,
+    PRIMARY KEY (user_id, competency_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_ledger_user ON proficiency_ledger(user_id);
 CREATE INDEX IF NOT EXISTS idx_event_user  ON assessment_event(user_id);
 CREATE INDEX IF NOT EXISTS idx_token_user  ON auth_token(user_id);

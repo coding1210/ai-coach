@@ -169,6 +169,26 @@ def test_outcomes_include_mastery_snapshot(client):
     assert "mastery_snapshot" in body and "held_count" in body["mastery_snapshot"]
 
 
+def test_llm_endpoint_enforces_session_cap(client):
+    from app.api.limits import reset_limits
+    from app.config import get_settings
+
+    s = get_settings()
+    orig = s.llm_session_cap
+    s.llm_session_cap = 2
+    reset_limits()
+    try:
+        h = _auth(client)
+        codes = [
+            client.post("/practice/rep", json={"competency_id": "rag.when_not"}, headers=h).status_code
+            for _ in range(3)
+        ]
+        assert 200 in codes and codes[-1] == 429  # 3rd op over the cap of 2
+    finally:
+        s.llm_session_cap = orig
+        reset_limits()
+
+
 def test_outcome_tracking_roundtrip(client):
     h = _auth(client)
     client.post("/outcome", json={"status": "hired", "role": "Gen AI Engineer", "notes": "offer!"}, headers=h)

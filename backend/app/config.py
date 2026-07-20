@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     # default — running user code is a real risk; enable only in a trusted env.
     enable_sandbox: bool = False
 
+    # ─── Abuse / cost guards ─────────────────────────────────────
+    # The LLM-heavy endpoints are metered per authenticated session. Without
+    # these, a public URL on live keys is an open wallet. In-process counters
+    # (fine for a single worker; use Redis behind a load balancer).
+    rate_limit_per_min: int = 60      # requests/min per session on LLM endpoints
+    llm_session_cap: int = 150        # total LLM-heavy ops per session
+    ws_turn_cap: int = 80             # max coaching/interview turns per WS session
+
     @property
     def has_postgres(self) -> bool:
         return bool(self.database_url)

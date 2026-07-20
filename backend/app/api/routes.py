@@ -12,6 +12,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from app.api.limits import llm_guard
 from app.auth import current_user, new_token, new_user_id
 from app.models import (
     AssessmentEvent,
@@ -83,7 +84,7 @@ async def get_exercise(competency_id: str) -> ExerciseOut:
 
 @router.post("/grade", response_model=GradeResponse)
 async def grade(
-    body: GradeRequest, request: Request, user_id: str = Depends(current_user)
+    body: GradeRequest, request: Request, user_id: str = Depends(llm_guard)
 ) -> GradeResponse:
     """Grade a submitted artifact and persist the behavioral score to the
     authenticated user's ledger."""
@@ -190,7 +191,7 @@ async def get_due(request: Request, user_id: str = Depends(current_user)) -> dic
 
 @router.post("/diagnose/code")
 async def diagnose_from_code(
-    body: CodeDiagnoseRequest, request: Request, user_id: str = Depends(current_user)
+    body: CodeDiagnoseRequest, request: Request, user_id: str = Depends(llm_guard)
 ) -> dict:
     """Diagnose the user from real code (pasted or a public GitHub repo)."""
     from datetime import datetime, timezone
@@ -241,7 +242,7 @@ async def diagnose_from_code(
 
 @router.post("/practice/rep")
 async def practice_rep(
-    body: PracticeRepRequest, request: Request, user_id: str = Depends(current_user)
+    body: PracticeRepRequest, request: Request, user_id: str = Depends(llm_guard)
 ) -> dict:
     """Generate (or reuse) a calibrated practice rep. Rubric is withheld from the
     response — grade via /practice/grade with the returned rep_id."""
@@ -283,7 +284,7 @@ async def practice_rep(
 
 @router.post("/practice/grade")
 async def practice_grade(
-    body: PracticeGradeRequest, request: Request, user_id: str = Depends(current_user)
+    body: PracticeGradeRequest, request: Request, user_id: str = Depends(llm_guard)
 ) -> dict:
     """Grade a submission, record the attempt, update mastery, and say what's next."""
     from app.coaching.mastery import update_mastery
@@ -317,7 +318,7 @@ async def practice_rep_stats(request: Request, user_id: str = Depends(current_us
 
 @router.post("/practice/hint")
 async def practice_hint(
-    body: PracticeHintRequest, request: Request, user_id: str = Depends(current_user)
+    body: PracticeHintRequest, request: Request, user_id: str = Depends(llm_guard)
 ) -> dict:
     """A graduated hint (tier 1-3) for the current rep."""
     from app.coaching.hints import hint

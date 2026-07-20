@@ -25,6 +25,7 @@ import uuid
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from langgraph.types import Command
 
+from app.config import get_settings
 from app.graph.state import FINISH_ASSESSMENT
 from app.llm.router import get_router
 from app.models import WSClientMessage, WSServerEvent
@@ -111,11 +112,26 @@ async def session(ws: WebSocket) -> None:
     thread_id: str | None = None
     config: dict | None = None
     notified_degraded = False
+    turns = 0
+    turn_cap = get_settings().ws_turn_cap
 
     try:
         while True:
             raw = await ws.receive_json()
             msg = WSClientMessage.model_validate(raw)
+
+            # Cost guard: cap the number of LLM-spending turns per WS session.
+            if msg.type in ("user_message", "finish") or (thread_id is None or msg.type == "start"):
+                turns += 1
+                if turns > turn_cap:
+                    await ws.send_json(
+                        WSServerEvent(
+                            type="error",
+                            content="This session has reached its limit. Start a new session to continue.",
+                        ).model_dump(exclude_none=True)
+                    )
+                    await ws.close()
+                    return
 
             if thread_id is None or msg.type == "start":
                 user_id = await repo.user_for_token(msg.token or "")
