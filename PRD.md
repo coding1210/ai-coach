@@ -96,7 +96,7 @@ Because this is an interview prototype, "success" = **demonstrated capability + 
 - **Latency:** conversational feel; token streaming; voice turn < ~1s median.
 - **Cost:** free tiers + client-side voice → ~\$0 at demo scale; GPT used surgically for high-value scoring.
 - **Reliability:** every external dependency has a fallback; demo runs locally + tunnel to avoid cold starts.
-- **AI-first build:** specs and code generated with Claude Code/Cursor; target 1.5–2 week build (per interviewer expectation).
+- **AI-first build:** specs and code generated with AI coding assistants; target 1.5–2 week build (per interviewer expectation).
 - **Observability:** trace LLM calls, token/cost, and scoring decisions for debugging and the demo narrative.
 
 ## 10. Scope & phasing (MVP)

@@ -18,7 +18,7 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
       - name: Sync dependencies
-        run: uv sync --frozen || uv sync
+        run: uv sync --extra dev
       - name: Lint
         run: uv run ruff check app tests
       - name: Test
