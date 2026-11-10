@@ -40,6 +40,11 @@ async def update_mastery(
     level = int(grade.get("level", 1))
     passed = bool(grade.get("passed"))
 
+    # Re-submitting a rep you've already passed is practice, not new evidence:
+    # only the first clear of a given rep counts toward "held".
+    prior = await repo.get_rep_attempts(user_id, cid)
+    first_clear = not any(a.get("rep_id") == rep.id and a.get("passed") for a in prior)
+
     attempt_no = await repo.add_rep_attempt(
         user_id,
         {
@@ -58,7 +63,7 @@ async def update_mastery(
 
     # Count a clear at the competency's TARGET level toward mastery.
     cleared_at_target = int(m.get("reps_cleared_at_target") or 0)
-    if passed and rep.target_level >= target:
+    if passed and first_clear and rep.target_level >= target:
         cleared_at_target += 1
 
     held = cleared_at_target >= MASTERY_CLEARS

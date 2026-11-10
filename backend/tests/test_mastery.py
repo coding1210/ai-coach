@@ -18,10 +18,10 @@ async def test_held_after_enough_clears_at_target():
     repo = MemoryRepository()
     cid = "rag.when_not"
     tgt = competency_target(cid)
-    rep = _rep(cid, tgt)
     grade = {"level": tgt, "passed": True, "confidence": 0.8}
     last = None
-    for _ in range(MASTERY_CLEARS):
+    for i in range(MASTERY_CLEARS):
+        rep = _rep(cid, tgt).model_copy(update={"id": f"rep_{cid}_{tgt}_{i}"})
         last = await update_mastery(repo, "u1", rep, grade, hints_used=0)
     assert last["held"] is True
     m = await repo.get_mastery("u1", cid)
@@ -61,8 +61,8 @@ async def test_flag_demotes_rep_out_of_rotation():
     repo = MemoryRepository()
     await repo.save_rep("rep_x", "rag.chunking", "code", 4, {"id": "rep_x"})
     assert await repo.get_cached_rep("rag.chunking", "code", 4) is not None
-    await repo.flag_rep("rep_x")
-    await repo.flag_rep("rep_x")  # hits the demote threshold
+    await repo.flag_rep("rep_x", "u1")
+    await repo.flag_rep("rep_x", "u2")  # hits the demote threshold
     assert await repo.get_cached_rep("rag.chunking", "code", 4) is None
     stats = {s["rep_id"]: s for s in await repo.get_rep_stats()}
     assert stats["rep_x"]["demoted"] is True and stats["rep_x"]["flags"] == 2
@@ -84,3 +84,26 @@ def test_prereqs_gate():
     assert prereqs_met("rag.hybrid_rerank", {"rag.embeddings": 3}) is True
     assert prereqs_met("rag.hybrid_rerank", {"rag.embeddings": 1}) is False
     assert prereqs_met("rag.chunking", {}) is True  # no prereqs
+
+
+@pytest.mark.asyncio
+async def test_resubmitting_a_passed_rep_does_not_count_twice():
+    repo = MemoryRepository()
+    cid = "rag.when_not"
+    tgt = competency_target(cid)
+    rep = _rep(cid, tgt)
+    grade = {"level": tgt, "passed": True, "confidence": 0.8}
+    for _ in range(MASTERY_CLEARS + 1):
+        last = await update_mastery(repo, "u1", rep, grade, hints_used=0)
+    assert last["held"] is False and last["reps_cleared_at_target"] == 1
+
+
+@pytest.mark.asyncio
+async def test_one_user_cannot_demote_a_rep_alone():
+    repo = MemoryRepository()
+    await repo.save_rep("rep_y", "rag.chunking", "code", 4, {"id": "rep_y"})
+    for _ in range(5):
+        await repo.flag_rep("rep_y", "u1")
+    assert await repo.get_cached_rep("rag.chunking", "code", 4) is not None
+    stats = {s["rep_id"]: s for s in await repo.get_rep_stats()}
+    assert stats["rep_y"]["flags"] == 1 and stats["rep_y"]["demoted"] is False

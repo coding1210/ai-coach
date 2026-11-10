@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     rate_limit_per_min: int = 60      # requests/min per session on LLM endpoints
     llm_session_cap: int = 150        # total LLM-heavy ops per session
     ws_turn_cap: int = 80             # max coaching/interview turns per WS session
+    auth_sessions_per_min: int = 20   # new anonymous sessions per client IP per minute
 
     @property
     def has_postgres(self) -> bool:

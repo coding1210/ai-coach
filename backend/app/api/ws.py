@@ -150,6 +150,11 @@ async def session(ws: WebSocket) -> None:
                 # from the checkpoint and re-signal the current phase — no re-run.
                 if msg.thread_id and await _resume(ws, graph, config, thread_id, user_id):
                     continue
+                if msg.thread_id:
+                    # Not resumable as *this* user (unknown, or someone else's
+                    # checkpoint): start fresh on a new thread — never write into it.
+                    thread_id = str(uuid.uuid4())
+                    config = {"configurable": {"thread_id": thread_id, "repo": repo}}
 
                 payload = {
                     "thread_id": thread_id,
@@ -188,9 +193,12 @@ async def session(ws: WebSocket) -> None:
 
     except WebSocketDisconnect:
         return
-    except Exception as e:  # noqa: BLE001 — surface, never silently hang the client
+    except Exception:  # noqa: BLE001 — surface, never silently hang the client
         log.exception("WS session error")
         with contextlib.suppress(Exception):
             await ws.send_json(
-                WSServerEvent(type="error", content=str(e)).model_dump(exclude_none=True)
+                WSServerEvent(
+                    type="error", content="Something went wrong on our side. Please start a new session."
+                ).model_dump(exclude_none=True)
             )
+            await ws.close()

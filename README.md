@@ -31,7 +31,7 @@ never "% of a syllabus completed."
   rubric; the rubric is withheld from the client so practice reps can't be gamed.
 - **Production basics.** Token streaming over WebSockets, bearer-token auth, rate
   limiting and a usage cap ([`backend/app/api/limits.py`](backend/app/api/limits.py)),
-  Docker, and GitHub Actions CI (ruff + **91 backend tests** that run offline,
+  Docker, and GitHub Actions CI (ruff + **99 backend tests** that run offline,
   plus the frontend).
 
 ## Status
@@ -69,7 +69,7 @@ never "% of a syllabus completed."
 # ── backend ──────────────────────────────────────────────
 cd backend
 uv sync --extra dev
-uv run pytest                                   # 91 tests, no DB/keys needed
+uv run pytest                                   # 99 tests, no DB/keys needed
 docker compose up -d                            # (optional) local Postgres
 cp .env.example .env                            # add GROQ/OPENAI/GEMINI keys to go live
 uv run uvicorn app.main:app --reload --port 8000

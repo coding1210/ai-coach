@@ -12,7 +12,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from app.api.limits import llm_guard
+from app.api.limits import charge, llm_guard, session_mint_guard
 from app.auth import current_user, new_token, new_user_id
 from app.models import (
     AssessmentEvent,
@@ -31,7 +31,9 @@ from app.models import (
 router = APIRouter()
 
 
-@router.post("/auth/session", response_model=AuthSessionOut)
+@router.post(
+    "/auth/session", response_model=AuthSessionOut, dependencies=[Depends(session_mint_guard)]
+)
 async def create_session(request: Request) -> AuthSessionOut:
     """Mint an anonymous session: a fresh user_id + an opaque bearer token."""
     user_id = new_user_id()
@@ -200,7 +202,14 @@ async def diagnose_from_code(
     from app.coaching.scheduler import schedule_after_session
     from app.competency.loader import get_competency_map
     from app.competency.selection import target_for
+    from app.config import get_settings
     from app.eval.code_diagnosis import diagnose_code, fetch_github
+    from app.eval.exercises import get_exercise_bank
+
+    # This fans out to every exercise × the judge ensemble — charge for all of
+    # it up front (llm_guard already took one unit).
+    calls = len(get_exercise_bank().exercises) * max(1, get_settings().judge_samples)
+    charge(user_id, max(0, calls - 1))
 
     if body.source == "github":
         try:
@@ -296,6 +305,9 @@ async def practice_grade(
         raise HTTPException(status_code=404, detail="Rep not found — generate a new one.")
     rep = Rep.model_validate(data)
     grade = await grade_rep(rep, body.submission)
+    if grade.get("degraded"):
+        # No real grader answered: don't record evidence we don't have.
+        raise HTTPException(status_code=503, detail=grade["evidence"])
     progress = await update_mastery(repo, user_id, rep, grade, max(0, body.hints_used))
     await repo.record_rep_outcome(rep.id, bool(grade.get("passed")), hint_exhausted=body.hints_used >= 3)
     return {**grade, **progress}
@@ -306,7 +318,7 @@ async def practice_flag(
     body: PracticeHintRequest, request: Request, user_id: str = Depends(current_user)
 ) -> dict:
     """Flag a rep as bad — enough flags auto-demote it out of rotation."""
-    await request.app.state.repo.flag_rep(body.rep_id)
+    await request.app.state.repo.flag_rep(body.rep_id, user_id)
     return {"ok": True}
 
 

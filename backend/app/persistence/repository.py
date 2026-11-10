@@ -121,7 +121,12 @@ class Repository(ABC):
         s["passes"] += 1 if passed else 0
         s["hint_exhausted"] += 1 if hint_exhausted else 0
 
-    async def flag_rep(self, rep_id: str) -> None:
+    async def flag_rep(self, rep_id: str, user_id: str) -> None:
+        """Count a flag once per user, so one account can't demote a shared rep."""
+        flaggers = self._aux("rep_flaggers").setdefault(rep_id, set())
+        if user_id in flaggers:
+            return
+        flaggers.add(user_id)
         s = self._stat(rep_id)
         s["flags"] += 1
         if s["flags"] >= self._FLAG_DEMOTE_AT:

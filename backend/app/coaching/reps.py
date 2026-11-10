@@ -275,8 +275,8 @@ async def generate_rep(competency_id: str, target_level: int, rep_type: RepType 
             competency_id=competency_id, type=rep_type, target_level=target_level,
             difficulty=target_level,
             prompt=str(out.get("prompt", "")).strip(),
-            given_artifact=(str(out.get("given_artifact")).strip() or None) if rep_type == "critique" else None,
-            audience=(str(out.get("audience")).strip() or None) if rep_type == "explain" else None,
+            given_artifact=(str(out.get("given_artifact") or "").strip() or None) if rep_type == "critique" else None,
+            audience=(str(out.get("audience") or "").strip() or None) if rep_type == "explain" else None,
             language="python" if rep_type == "code" else None,
             rubric=crit, source="generated",
         )
@@ -419,9 +419,9 @@ async def grade_rep(rep: Rep, submission: str) -> dict:
     if not verdicts:
         # Degraded/offline: neutral, low-confidence result.
         return {
-            "competency_id": rep.competency_id, "level": 3, "passed": 3 >= rep.target_level,
-            "confidence": 0.3, "target_level": rep.target_level,
-            "evidence": "Graded in degraded mode — no real judge available.",
+            "competency_id": rep.competency_id, "level": 1, "passed": False,
+            "confidence": 0.0, "target_level": rep.target_level, "degraded": True,
+            "evidence": "Couldn't reach a grader — this attempt wasn't scored. Try again shortly.",
             "criteria_results": [],
         }
 

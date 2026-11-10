@@ -16,3 +16,16 @@ for _key in (
     "DATABASE_URL",
 ):
     os.environ[_key] = ""
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _fresh_limits():
+    """In-process rate/budget counters are global — reset them around every test."""
+    from app.api.limits import reset_limits
+
+    reset_limits()
+    yield
+    reset_limits()

@@ -83,8 +83,7 @@ class LLMRouter:
                 continue
             try:
                 result = await asyncio.wait_for(call(provider), timeout=_CALL_TIMEOUT)
-                if name == "fake":
-                    self._degraded = True
+                self._degraded = name == "fake"
                 return result
             except Exception as e:  # noqa: BLE001 — try the next provider
                 last_exc = e
@@ -109,14 +108,12 @@ class LLMRouter:
             try:
                 first = await asyncio.wait_for(gen.__anext__(), timeout=_CALL_TIMEOUT)
             except StopAsyncIteration:
-                if name == "fake":
-                    self._degraded = True
+                self._degraded = name == "fake"
                 return
             except Exception as e:  # noqa: BLE001 — try the next provider
                 log.warning("Stream provider %r failed for %r: %s — failing over", name, task, e)
                 continue
-            if name == "fake":
-                self._degraded = True
+            self._degraded = name == "fake"
             yield first
             try:
                 async for tok in gen:

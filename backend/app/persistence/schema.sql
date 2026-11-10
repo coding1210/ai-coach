@@ -67,6 +67,14 @@ CREATE TABLE IF NOT EXISTS practice_rep (
 );
 CREATE INDEX IF NOT EXISTS idx_rep_key ON practice_rep(competency_id, rep_type, level);
 
+-- Who flagged which rep — one flag per user, so a single account can't demote it.
+CREATE TABLE IF NOT EXISTS rep_flag (
+    rep_id     TEXT NOT NULL,
+    user_id    TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (rep_id, user_id)
+);
+
 -- One row per graded practice attempt — the evidence trail.
 CREATE TABLE IF NOT EXISTS rep_attempt (
     id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

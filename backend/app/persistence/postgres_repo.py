@@ -205,8 +205,15 @@ class PostgresRepository(Repository):
                 (1 if passed else 0, 1 if hint_exhausted else 0, rep_id),
             )
 
-    async def flag_rep(self, rep_id) -> None:
-        async with self._pool.connection() as conn:
+    async def flag_rep(self, rep_id, user_id) -> None:
+        async with self._pool.connection() as conn, conn.transaction():
+            cur = await conn.execute(
+                "INSERT INTO rep_flag (rep_id, user_id) VALUES (%s, %s) "
+                "ON CONFLICT DO NOTHING",
+                (rep_id, user_id),
+            )
+            if cur.rowcount == 0:
+                return  # this user already flagged it
             await conn.execute(
                 "UPDATE practice_rep SET flags = flags + 1, "
                 "demoted = (flags + 1 >= %s) WHERE rep_id = %s",
@@ -221,7 +228,13 @@ class PostgresRepository(Repository):
             return list(await cur.fetchall())
 
     async def add_rep_attempt(self, user_id, attempt) -> int:
-        async with self._pool.connection() as conn:
+        async with self._pool.connection() as conn, conn.transaction():
+            # Serialize numbering per (user, competency) so concurrent grades
+            # can't both read the same count.
+            await conn.execute(
+                "SELECT pg_advisory_xact_lock(hashtext(%s))",
+                (f"{user_id}:{attempt.get('competency_id')}",),
+            )
             cur = await conn.execute(
                 "SELECT count(*) AS n FROM rep_attempt WHERE user_id = %s AND competency_id = %s",
                 (user_id, attempt.get("competency_id")),
