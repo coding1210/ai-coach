@@ -1,7 +1,7 @@
 # PRD — AI Coach for Gen AI Engineers (Python)
 
 **Status:** Draft v1 · **Owner:** Mohammad Abuhraira · **Date:** 2026-07-14
-**Context:** Prototype assignment from the AI Engineer technical interview (see meeting MoM). The goal is a *working, live-demoable* AI **coaching** agent — not a teaching/course platform.
+**Context:** Prototype built from an AI Engineer technical-interview brief. The goal is a *working, live-demoable* AI **coaching** agent — not a teaching/course platform.
 
 ---
 
