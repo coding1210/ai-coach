@@ -82,7 +82,7 @@ Scaling path (post-demo): move scoring volume to Groq/Gemini, add caching + mode
 
 ## 6. Build tooling (AI-first)
 
-Per interviewer expectation — generate specs and code, validate, integrate, focus on architecture:
+Approach — generate specs and code, validate, integrate, focus on architecture:
 - **AI coding assistants** for scaffolding and codegen.
 - Specs (this doc set) drive generation.
 - Target timeline: **1.5–2 weeks**.

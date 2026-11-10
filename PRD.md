@@ -1,6 +1,6 @@
 # PRD — AI Coach for Gen AI Engineers (Python)
 
-**Status:** Draft v1 · **Owner:** Mohammad Abuhraira · **Date:** 2026-07-14
+**Status:** Draft v1 · **Date:** 2026-07-14
 **Context:** Prototype built from an AI Engineer technical-interview brief. The goal is a *working, live-demoable* AI **coaching** agent — not a teaching/course platform.
 
 ---
@@ -19,7 +19,7 @@ This mirrors the interview brief: *design an AI coaching platform that understan
 
 ## 3. Guiding principle — Coaching, NOT teaching
 
-This is the single most important product decision, and it was the explicit correction in the interview. Every feature must respect it.
+This is the single most important product decision. Every feature must respect it.
 
 | Teaching (explicitly rejected) | Coaching (what we build) |
 | --- | --- |
@@ -61,7 +61,7 @@ Both need: honest diagnosis, prioritized focus, and a coach that remembers them.
 
 ## 6. Success metrics
 
-Because this is an interview prototype, "success" = **demonstrated capability + business framing**, not scale.
+Because this is a prototype, "success" = **demonstrated capability + business framing**, not scale.
 
 | Metric | Target |
 | --- | --- |
@@ -96,7 +96,7 @@ Because this is an interview prototype, "success" = **demonstrated capability + 
 - **Latency:** conversational feel; token streaming; voice turn < ~1s median.
 - **Cost:** free tiers + client-side voice → ~\$0 at demo scale; GPT used surgically for high-value scoring.
 - **Reliability:** every external dependency has a fallback; demo runs locally + tunnel to avoid cold starts.
-- **AI-first build:** specs and code generated with AI coding assistants; target 1.5–2 week build (per interviewer expectation).
+- **AI-first build:** specs and code generated with AI coding assistants; target 1.5–2 week build.
 - **Observability:** trace LLM calls, token/cost, and scoring decisions for debugging and the demo narrative.
 
 ## 10. Scope & phasing (MVP)
@@ -110,7 +110,7 @@ Because this is an interview prototype, "success" = **demonstrated capability + 
 | Risk | Mitigation |
 | --- | --- |
 | Drifts back into "teaching" | Principle §3 enforced in prompts, report, and coaching nodes; competency map stays internal |
-| Demo fails live (repeat of interview) | Run locally + tunnel; fallbacks on every dependency; dry-run script |
+| Live-demo failure risk | Run locally + tunnel; fallbacks on every dependency; dry-run script |
 | Scoring feels arbitrary | Rubric-based LLM-judge with cited evidence; calibrate on a small human-labeled sample |
 | Free-tier rate limits mid-demo | Groq→Gemini fallback; GPT as paid backstop for scoring |
 | Voice latency too high | Browser-side TTS (Kokoro/Web Speech); STT via fast Groq Whisper |
